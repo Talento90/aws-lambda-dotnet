@@ -24,6 +24,7 @@ export DOTNET_ROOT="/var/lang/bin"
 DOTNET_BIN="${DOTNET_ROOT}/dotnet"
 DOTNET_EXEC="exec"
 DOTNET_ARGS=()
+EXECUTABLE_BINARY_EXIST=false
 
 LAMBDA_HANDLER=""
 # Command-line parameter has precedence over "_HANDLER" environment variable
@@ -38,18 +39,20 @@ fi
 
 HANDLER_COL_INDEX=$(expr index "${LAMBDA_HANDLER}" ":")
 
-if [[ "${HANDLER_COL_INDEX}" == 0 ]]; then
+if [[ "${HANDLER_COL_INDEX}" == 0 ]]; then 
   EXECUTABLE_ASSEMBLY="${LAMBDA_TASK_ROOT}/${LAMBDA_HANDLER}"
+  EXECUTABLE_BINARY="${LAMBDA_TASK_ROOT}/${LAMBDA_HANDLER}"
   if [[ "${EXECUTABLE_ASSEMBLY}" != *.dll ]]; then
     EXECUTABLE_ASSEMBLY="${EXECUTABLE_ASSEMBLY}.dll"
   fi
-
-  if [ ! -f "${EXECUTABLE_ASSEMBLY}" ]; then
-    echo "Error: executable assembly ${EXECUTABLE_ASSEMBLY} was not found." 1>&2
+  if [[ -f "${EXECUTABLE_ASSEMBLY}" ]]; then
+    DOTNET_ARGS+=("${EXECUTABLE_ASSEMBLY}")
+  elif [[ -f "${EXECUTABLE_BINARY}" ]]; then
+    EXECUTABLE_BINARY_EXIST=true
+  else
+    echo "Error: executable assembly ${EXECUTABLE_ASSEMBLY} or binary ${EXECUTABLE_BINARY} not found." 1>&2
     exit 104
   fi
-
-  DOTNET_ARGS+=("${EXECUTABLE_ASSEMBLY}")
 else
   if [ -n "${LAMBDA_DOTNET_MAIN_ASSEMBLY}" ]; then
     if [[ "${LAMBDA_DOTNET_MAIN_ASSEMBLY}" == *.dll ]]; then
@@ -63,22 +66,28 @@ else
 
   DEPS_FILE="${LAMBDA_TASK_ROOT}/${ASSEMBLY_NAME}.deps.json"
   if ! [ -f "${DEPS_FILE}" ]; then
-    DEPS_FILES=("${LAMBDA_TASK_ROOT}"/*.deps.json)
-    if [ "${#DEPS_FILES[@]}" -ne 1 ]; then
+    DEPS_FILES=( "${LAMBDA_TASK_ROOT}"/*.deps.json )
+
+    # Check if there were any matches to the *.deps.json glob, and that the glob was resolved
+    # This makes the matching independent from the global `nullopt` shopt's value (https://www.gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html)
+    if [ "${#DEPS_FILES[@]}" -ne 1 ] || echo "${DEPS_FILES[0]}" | grep -q -F '*'; then
       echo "Error: .NET binaries for Lambda function are not correctly installed in the ${LAMBDA_TASK_ROOT} directory of the image when the image was built. The ${LAMBDA_TASK_ROOT} directory is missing the required .deps.json file." 1>&2
       exit 105
     fi
-    DEPS_FILE="${DEPS_FILES[1]}"
+    DEPS_FILE="${DEPS_FILES[0]}"
   fi
-  
+
   RUNTIMECONFIG_FILE="${LAMBDA_TASK_ROOT}/${ASSEMBLY_NAME}.runtimeconfig.json"
   if ! [ -f "${RUNTIMECONFIG_FILE}" ]; then
-    RUNTIMECONFIG_FILES=("${LAMBDA_TASK_ROOT}"/*.runtimeconfig.json)
-    if [ "${#RUNTIMECONFIG_FILES[@]}" -ne 1 ]; then
+    RUNTIMECONFIG_FILES=( "${LAMBDA_TASK_ROOT}"/*.runtimeconfig.json )
+
+    # Check if there were any matches to the *.runtimeconfig.json glob, and that the glob was resolved
+    # This makes the matching independent from the global `nullopt` shopt's value (https://www.gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html)
+    if [ "${#RUNTIMECONFIG_FILES[@]}" -ne 1 ] || echo "${RUNTIMECONFIG_FILES[0]}" | grep -q -F '*'; then
       echo "Error: .NET binaries for Lambda function are not correctly installed in the ${LAMBDA_TASK_ROOT} directory of the image when the image was built. The ${LAMBDA_TASK_ROOT} directory is missing the required .runtimeconfig.json file." 1>&2
       exit 106
     fi
-    RUNTIMECONFIG_FILE="${RUNTIMECONFIG_FILES[1]}"
+    RUNTIMECONFIG_FILE="${RUNTIMECONFIG_FILES[0]}"
   fi
 
   DOTNET_ARGS+=("--depsfile" "${DEPS_FILE}"
@@ -90,7 +99,11 @@ fi
 # To support runtime wrapper scripts
 # https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper
 if [ -z "${AWS_LAMBDA_EXEC_WRAPPER}" ]; then
-  exec "${DOTNET_BIN}" "${DOTNET_EXEC}" "${DOTNET_ARGS[@]}"
+  if [ ${EXECUTABLE_BINARY_EXIST} = true ]; then
+    exec "${EXECUTABLE_BINARY}"
+  else
+    exec "${DOTNET_BIN}" "${DOTNET_EXEC}" "${DOTNET_ARGS[@]}"
+  fi
 else
   if [ ! -f "${AWS_LAMBDA_EXEC_WRAPPER}" ]; then
     echo "${AWS_LAMBDA_EXEC_WRAPPER}: does not exist"
@@ -100,5 +113,9 @@ else
     echo "${AWS_LAMBDA_EXEC_WRAPPER}: is not an executable"
     exit 126
   fi
-  exec -- "${AWS_LAMBDA_EXEC_WRAPPER}" "${DOTNET_BIN}" "${DOTNET_EXEC}" "${DOTNET_ARGS[@]}"
+  if [ ${EXECUTABLE_BINARY_EXIST} = true ]; then
+    exec -- "${AWS_LAMBDA_EXEC_WRAPPER}" "${EXECUTABLE_BINARY}"
+  else
+    exec -- "${AWS_LAMBDA_EXEC_WRAPPER}" "${DOTNET_BIN}" "${DOTNET_EXEC}" "${DOTNET_ARGS[@]}"
+  fi
 fi

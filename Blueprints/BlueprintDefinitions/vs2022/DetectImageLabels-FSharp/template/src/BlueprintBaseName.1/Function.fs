@@ -39,21 +39,22 @@ type Function(s3Client: IAmazonS3, rekognitionClient: IAmazonRekognition, minCon
     /// A function for responding to S3 create events. It will determine if the object is an image
     /// and use Amazon Rekognition to detect labels and add the labels as tags on the S3 object.
     /// </summary>
-    /// <param name="input"></param>
-    /// <param name="context"></param>
+    /// <param name="input">The S3 event to process.</param>
+    /// <param name="context">The ILambdaContext that provides methods for logging and describing the Lambda environment.</param>
     /// <returns></returns>
-    member __.FunctionHandler (input: S3Event) (context: ILambdaContext) =
-        let isSupportedImageType (record: S3EventNotification.S3EventNotificationRecord) =
+    member __.FunctionHandler (input: S3Event) (context: ILambdaContext) = task {
+
+        let isSupportedImageType (record: S3Event.S3EventNotificationRecord) =
             match Set.contains (Path.GetExtension record.S3.Object.Key) supportedImageTypes with
             | true -> true
             | false ->
                 sprintf "Object %s:%s is not a supported image type" record.S3.Bucket.Name record.S3.Object.Key
-                |> context.Logger.LogLine
+                |> context.Logger.LogInformation
                 false
 
-        let processRecordAsync (record: S3EventNotification.S3EventNotificationRecord) (context: ILambdaContext) = async {
+        let processRecordAsync (record: S3Event.S3EventNotificationRecord) (context: ILambdaContext) = task {
             sprintf "Looking for labels in image %s:%s" record.S3.Bucket.Name record.S3.Object.Key
-            |> context.Logger.LogLine
+            |> context.Logger.LogInformation
 
             let detectRequest =
                 DetectLabelsRequest(
@@ -74,7 +75,7 @@ type Function(s3Client: IAmazonS3, rekognitionClient: IAmazonRekognition, minCon
                 detectResponse.Labels
                 |> Seq.truncate 10
                 |> Seq.map (fun x ->
-                    sprintf "\tFound Label %s with confidence %f" x.Name x.Confidence |> context.Logger.LogLine
+                    sprintf "\tFound Label %s with confidence %f" x.Name x.Confidence |> context.Logger.LogInformation
                     Tag(Key = x.Name, Value = string x.Confidence))
                 |> List
 
@@ -89,9 +90,10 @@ type Function(s3Client: IAmazonS3, rekognitionClient: IAmazonRekognition, minCon
                 s3Client.PutObjectTaggingAsync(putTags)
                 |> Async.AwaitTask
 
-            context.Logger.LogLine("Tags put on S3 object")
+            context.Logger.LogInformation("Tags put on S3 object")
         }
 
         input.Records
         |> Seq.filter isSupportedImageType
-        |> Seq.iter(fun x -> processRecordAsync x context |> Async.RunSynchronously)
+        |> Seq.iter(fun x -> processRecordAsync x context |> Async.AwaitTask |> Async.RunSynchronously)
+    }

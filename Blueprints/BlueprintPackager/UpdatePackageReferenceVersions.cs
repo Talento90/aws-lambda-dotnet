@@ -14,7 +14,7 @@ namespace Packager
     public class UpdatePackageReferenceVersions
     {
         const string MicrosoftAspNetCoreAppVersion = "2.1.4";
-        const string AWSSDK_VERSION_MANIFEST = "https://raw.githubusercontent.com/aws/aws-sdk-net/master/generator/ServiceModels/_sdk-versions.json";
+        const string AWSSDK_VERSION_MANIFEST = "https://raw.githubusercontent.com/aws/aws-sdk-net/main/generator/ServiceModels/_sdk-versions.json";
 
         string BlueprintRoot { get; }
 
@@ -82,7 +82,7 @@ namespace Packager
                 xdoc.Load(projectfile);
 
                 var packageId = xdoc.SelectSingleNode("//PropertyGroup/PackageId")?.InnerText;
-                var versionPrefix = xdoc.SelectSingleNode("//PropertyGroup/VersionPrefix")?.InnerText;
+                var versionPrefix = xdoc.SelectSingleNode("//PropertyGroup/VersionPrefix")?.InnerText ?? xdoc.SelectSingleNode("//PropertyGroup/Version")?.InnerText;
 
                 if(!string.IsNullOrEmpty(packageId) && !string.IsNullOrEmpty(versionPrefix))
                 {
@@ -90,7 +90,25 @@ namespace Packager
                     versions[packageId] = versionPrefix;
                 }
             }
-            
+
+            // Capture version numbers for packages created via a nuspec file like the Amazon.Lambda.Annotations package.
+            foreach(var nuspecFile in Directory.GetFiles(Path.Combine(this.BlueprintRoot, "../../../Libraries/src"), "*.nuspec"))
+            {
+                var xdoc = new XmlDocument();
+                xdoc.Load(nuspecFile);
+
+                var metadata = xdoc.DocumentElement["metadata"];
+
+                var packageId = metadata["id"]?.InnerText;
+                var version = metadata["version"]?.InnerText;
+                
+                if (!string.IsNullOrEmpty(packageId) && !string.IsNullOrEmpty(version))
+                {
+                    Console.WriteLine($"\t{packageId}: {version}");
+                    versions[packageId] = version;
+                }
+            }
+
             try
             {
                 string jsonContent;

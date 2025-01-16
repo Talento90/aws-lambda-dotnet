@@ -5,7 +5,7 @@
     "Lambda",
     "Function"
   ],
-  "name": "Lambda Empty Function (.NET 6 Container Image)",
+  "name": "Lambda Empty Function (.NET 8 Container Image)",
   "identity": "AWS.Lambda.Function.Image.Empty.FSharp",
   "groupIdentity": "AWS.Lambda.Function.Image.Empty",
   "shortName": "lambda.image.EmptyFunction",
@@ -29,15 +29,6 @@
       "datatype": "string",
       "replaces": "DefaultRegion",
       "defaultValue": ""
-    },
-    "safe-sourcename": {
-      "type": "generated",
-      "generator": "coalesce",
-      "parameters": {
-        "sourceVariableName": "safe_namespace",
-        "fallbackVariableName": "safe_name"
-      },
-      "replaces": "BlueprintBaseName._1"
     }
   },
   "primaryOutputs": [

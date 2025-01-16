@@ -5,7 +5,7 @@
     "Lambda",
     "Serverless"
   ],
-  "name": "Lambda Empty Serverless (.NET 6 Container Image)",
+  "name": "Lambda Empty Serverless (.NET 8 Container Image)",
   "identity": "AWS.Lambda.Serverless.Image.Empty.CSharp",
   "groupIdentity": "AWS.Lambda.Image.Serverless.Empty",
   "shortName": "serverless.image.EmptyServerless",
@@ -29,15 +29,6 @@
       "datatype": "string",
       "replaces": "DefaultRegion",
       "defaultValue": ""
-    },
-    "safe-sourcename": {
-      "type": "generated",
-      "generator": "coalesce",
-      "parameters": {
-        "sourceVariableName": "safe_namespace",
-        "fallbackVariableName": "safe_name"
-      },
-      "replaces": "BlueprintBaseName._1"
     }
   },
   "primaryOutputs": [

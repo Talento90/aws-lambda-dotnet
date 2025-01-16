@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -28,6 +28,9 @@ namespace Amazon.Lambda.RuntimeSupport.Bootstrap
     /// <summary>
     /// Loads user code and prepares to invoke it.
     /// </summary>
+#if NET8_0_OR_GREATER
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("UserCodeLoader does not support trimming and is meant to be used in class library based Lambda functions.")]
+#endif
     internal class UserCodeLoader
     {
         private const string UserInvokeException = "An exception occurred while invoking customer handler.";
@@ -91,17 +94,17 @@ namespace Amazon.Lambda.RuntimeSupport.Bootstrap
             }
             catch (FileNotFoundException fex)
             {
-                _logger.LogError(fex, "An error occured on UCL Init");
+                _logger.LogError(fex, "An error occurred on UCL Init");
                 throw LambdaExceptions.ValidationException(Errors.UserCodeLoader.CouldNotFindHandlerAssembly, fex.FileName);
             }
             catch (LambdaValidationException validationException)
             {
-                _logger.LogError(validationException, "An error occured on UCL Init");
+                _logger.LogError(validationException, "An error occurred on UCL Init");
                 throw;
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "An error occured on UCL Init");
+                _logger.LogError(exception, "An error occurred on UCL Init");
                 throw LambdaExceptions.ValidationException(Errors.UserCodeLoader.UnableToLoadAssembly, _handler.AssemblyName);
             }
 

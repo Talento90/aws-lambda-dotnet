@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
-using System.Text;
 
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,6 @@ using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.AspNetCoreServer.Internal;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using System.Globalization;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
@@ -108,12 +106,15 @@ namespace Amazon.Lambda.AspNetCoreServer
                     _logger.LogWarning($"Request does not contain domain name information but is derived from {nameof(APIGatewayProxyFunction)}.");
                 }
 
+                var rawQueryString = Utilities.CreateQueryStringParametersFromHttpApiV2(apiGatewayRequest.RawQueryString);
+                requestFeatures.RawTarget = apiGatewayRequest.RawPath + rawQueryString;
+                requestFeatures.QueryString = rawQueryString;
+
                 requestFeatures.Path = Utilities.DecodeResourcePath(httpInfo.Path);
                 if (!requestFeatures.Path.StartsWith("/"))
                 {
                     requestFeatures.Path = "/" + requestFeatures.Path;
                 }
-
 
                 // If there is a stage name in the resource path strip it out and set the stage name as the base path.
                 // This is required so that ASP.NET Core will route request based on the resource path without the stage name.
@@ -126,8 +127,6 @@ namespace Amazon.Lambda.AspNetCoreServer
                         requestFeatures.PathBase = $"/{stageName}";
                     }
                 }
-
-                requestFeatures.QueryString = Utilities.CreateQueryStringParametersFromHttpApiV2(apiGatewayRequest.RawQueryString);
 
                 // API Gateway HTTP API V2 format supports multiple values for headers by comma separating the values.
                 if (apiGatewayRequest.Headers != null)
@@ -177,9 +176,9 @@ namespace Amazon.Lambda.AspNetCoreServer
                     connectionFeatures.RemoteIpAddress = remoteIpAddress;
                 }
 
-                if (apiGatewayRequest?.Headers?.ContainsKey("X-Forwarded-Port") == true)
+                if (apiGatewayRequest?.Headers?.TryGetValue("X-Forwarded-Port", out var port) == true)
                 {
-                    connectionFeatures.RemotePort = int.Parse(apiGatewayRequest.Headers["X-Forwarded-Port"]);
+                    connectionFeatures.RemotePort = int.Parse(port, CultureInfo.InvariantCulture);
                 }
 
                 // Call consumers customize method in case they want to change how API Gateway's request

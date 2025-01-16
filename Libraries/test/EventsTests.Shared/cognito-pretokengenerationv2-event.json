@@ -1,0 +1,85 @@
+﻿{
+  "version": "2",
+  "region": "us-east-1",
+  "userPoolId": "us-east-1_id",
+  "userName": "username_uuid",
+  "callerContext": {
+    "awsSdkVersion": "version",
+    "clientId": "client_id"
+  },
+  "triggerSource": "trigger_source",
+  "request": {
+    "userAttributes": {
+      "attribute_1": "attribute_value_1",
+      "attribute_2": "attribute_value_2"
+    },
+    "scopes": [
+      "scope_1",
+      "scope_2"
+    ],
+    "groupConfiguration": {
+      "groupsToOverride": [
+        "group1",
+        "group2"
+      ],
+      "iamRolesToOverride": [
+        "role1",
+        "role2"
+      ],
+      "preferredRole": "role"
+    },
+    "clientMetadata": {
+      "metadata_1": "metadata_value_1",
+      "metadata_2": "metadata_value_2"
+    }
+  },
+  "response": {
+    "claimsAndScopeOverrideDetails": {
+      "idTokenGeneration": {
+        "claimsToAddOrOverride": {
+          "id_claim_1": "id_claim_1_value",
+          "id_claim_2": "id_claim_2_value",
+          "id_claim_3": 1234,
+          "id_claim_4": true,
+          "id_claim_5": [ "id_claim_5_value", 5678, false ]
+        },
+        "claimsToSuppress": [
+          "suppress1",
+          "suppress2"
+        ]
+      },
+      "accessTokenGeneration": {
+        "claimsToAddOrOverride": {
+          "access_claim_1": "access_claim_1_value",
+          "access_claim_2": "access_claim_2_value",
+          "access_claim_3": 1234,
+          "access_claim_4": true,
+          "access_claim_5": [ "access_claim_5_value", 5678, false ]
+        },
+        "claimsToSuppress": [
+          "suppress1",
+          "suppress2"
+        ],
+        "scopesToAdd": [
+          "add1",
+          "add2"
+        ],
+        "scopesToSuppress": [
+          "suppress1",
+          "suppress2"
+        ]
+      },
+      "groupOverrideDetails": {
+        "groupsToOverride": [
+          "group1",
+          "group2"
+        ],
+        "iamRolesToOverride": [
+          "role1",
+          "role2"
+        ],
+        "preferredRole": "role"
+      }
+    }
+  }
+}

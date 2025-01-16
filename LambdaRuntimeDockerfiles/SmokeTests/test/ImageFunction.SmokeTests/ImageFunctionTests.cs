@@ -41,24 +41,7 @@ namespace ImageFunction.SmokeTests
         private static readonly RegionEndpoint TestRegion = RegionEndpoint.USWest2;
         private readonly AmazonLambdaClient _lambdaClient;
         private readonly AmazonIdentityManagementServiceClient _iamClient;
-        private readonly string _executionRoleName;
         private string _executionRoleArn;
-
-        private static readonly string LambdaAssumeRolePolicy =
-            @"
-            {
-              ""Version"": ""2012-10-17"",
-              ""Statement"": [
-                {
-                  ""Sid"": """",
-                  ""Effect"": ""Allow"",
-                  ""Principal"": {
-                    ""Service"": ""lambda.amazonaws.com""
-                  },
-                  ""Action"": ""sts:AssumeRole""
-                }
-              ]
-            }".Trim();
 
         private readonly string _functionName;
         private readonly string _imageUri;
@@ -67,7 +50,6 @@ namespace ImageFunction.SmokeTests
 
         public ImageFunctionTests()
         {
-            _executionRoleName = $"{TestIdentifier}-{Guid.NewGuid()}";
             _functionName = $"{TestIdentifier}-{Guid.NewGuid()}";
             var lambdaConfig = new AmazonLambdaConfig()
             {
@@ -75,8 +57,10 @@ namespace ImageFunction.SmokeTests
             };
             _lambdaClient = new AmazonLambdaClient(lambdaConfig);
             _iamClient = new AmazonIdentityManagementServiceClient(TestRegion);
+            _executionRoleArn = Environment.GetEnvironmentVariable("AWS_LAMBDA_SMOKETESTS_LAMBDA_ROLE");
             _imageUri = Environment.GetEnvironmentVariable("AWS_LAMBDA_IMAGE_URI");
 
+            Assert.NotNull(_executionRoleArn);
             Assert.NotNull(_imageUri);
 
             SetupAsync().GetAwaiter().GetResult();
@@ -87,6 +71,7 @@ namespace ImageFunction.SmokeTests
         [InlineData("ImageFunction::ImageFunction.Function::Ping", "ping", "pong")]
         [InlineData("ImageFunction::ImageFunction.Function::HttpsWorksAsync", "", "SUCCESS")]
         [InlineData("ImageFunction::ImageFunction.Function::VerifyLambdaContext", "", "SUCCESS")]
+        [InlineData("ImageFunction::ImageFunction.Function::VerifyTzData", "", "SUCCESS")]
         public async Task SuccessfulTests(string handler, string input, string expectedResponse)
         {
             await UpdateHandlerAsync(handler);
@@ -129,7 +114,45 @@ namespace ImageFunction.SmokeTests
             Assert.Equal(expectedErrorMessage, exception["errorMessage"].ToString());
         }
 
-        private async Task UpdateHandlerAsync(string handler)
+        /// <summary>
+        /// This test is checking the logic added to the bootstrap.sh to change the SSL_CERT_FILE
+        /// environment variable for AL2023.
+        /// </summary>
+        /// <param name="envName"></param>
+        /// <param name="expectedValue"></param>
+        /// <param name="setValue"></param>
+        /// <returns></returns>
+        [Theory]
+#if NET8_0_OR_GREATER
+        [InlineData("SSL_CERT_FILE", "\"/var/runtime/empty-certificates.crt\"", null)]
+        [InlineData("SSL_CERT_FILE", "\"/tmp/my-bundle\"", "/tmp/my-bundle")]
+#else
+        [InlineData("SSL_CERT_FILE", "\"\"", null)]
+        [InlineData("SSL_CERT_FILE", "\"/tmp/my-bundle\"", "/tmp/my-bundle")]
+#endif
+        public async Task CheckEnvironmentVariable(string envName, string expectedValue, string setValue)
+        {
+            var envVariables = new Dictionary<string, string>();
+            if(setValue != null)
+            {
+                envVariables[envName] = setValue;
+            }    
+
+            await UpdateHandlerAsync("ImageFunction::ImageFunction.Function::GetEnvironmentVariable", envVariables);
+
+            var payload = JsonConvert.SerializeObject(envName);
+            var invokeResponse = await InvokeFunctionAsync(payload);
+
+            Assert.True(invokeResponse.HttpStatusCode == System.Net.HttpStatusCode.OK);
+            Assert.True(invokeResponse.FunctionError == null, "Failed invoke with error: " + invokeResponse.FunctionError);
+
+            await using var responseStream = invokeResponse.Payload;
+            var actualValue = new StreamReader(responseStream).ReadToEnd();
+
+            Assert.Equal(expectedValue, actualValue);
+        }
+
+        private async Task UpdateHandlerAsync(string handler, Dictionary<string, string> environmentVariables = null)
         {
             var updateFunctionConfigurationRequest = new UpdateFunctionConfigurationRequest
             {
@@ -137,6 +160,10 @@ namespace ImageFunction.SmokeTests
                 ImageConfig = new ImageConfig()
                 {
                     Command = {handler},
+                },
+                Environment = new Amazon.Lambda.Model.Environment
+                {
+                    Variables = environmentVariables ?? new Dictionary<string, string>()
                 }
             };
             await _lambdaClient.UpdateFunctionConfigurationAsync(updateFunctionConfigurationRequest);
@@ -166,7 +193,6 @@ namespace ImageFunction.SmokeTests
 
         private async Task SetupAsync()
         {
-            await CreateRoleAsync();
             await CreateFunctionAsync();
         }
 
@@ -187,6 +213,7 @@ namespace ImageFunction.SmokeTests
                         MemorySize = 512,
                         Role = _executionRoleArn,
                         PackageType = PackageType.Image,
+                        Timeout = 30,
                         Architectures = new List<string> {GetArchitecture()}
                     });
                     break;
@@ -225,29 +252,6 @@ namespace ImageFunction.SmokeTests
             {
                 throw new Exception($"Timed out trying to create Lambda function {_functionName}");
             }
-        }
-
-        private async Task CreateRoleAsync()
-        {
-            var response = await _iamClient.CreateRoleAsync(new CreateRoleRequest
-            {
-                RoleName = _executionRoleName,
-                Description = $"Test role for {TestIdentifier}.",
-                AssumeRolePolicyDocument = LambdaAssumeRolePolicy
-            });
-            _executionRoleArn = response.Role.Arn;
-
-            // Wait  10 seconds to let execution role propagate
-            await Task.Delay(10000);
-
-            await _iamClient.AttachRolePolicyAsync(new AttachRolePolicyRequest
-            {
-                RoleName = _executionRoleName,
-                PolicyArn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-            });
-
-            // Wait  10 seconds to let execution role propagate
-            await Task.Delay(10000);
         }
 
         private static string GetArchitecture()
@@ -297,7 +301,6 @@ namespace ImageFunction.SmokeTests
 
         private async Task TearDownAsync()
         {
-            await DeleteRoleIfExistsAsync();
             await DeleteFunctionIfExistsAsync();
         }
 
@@ -311,30 +314,6 @@ namespace ImageFunction.SmokeTests
                 });
             }
             catch (ResourceNotFoundException)
-            {
-                // No action required
-            }
-        }
-
-        private async Task DeleteRoleIfExistsAsync()
-        {
-            try
-            {
-                await _iamClient.DetachRolePolicyAsync(new DetachRolePolicyRequest
-                {
-                    RoleName = _executionRoleName,
-                    PolicyArn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-                });
-
-                // Wait 10 seconds to let execution role propagate
-                await Task.Delay(10000);
-
-                await _iamClient.DeleteRoleAsync(new DeleteRoleRequest
-                {
-                    RoleName = _executionRoleName
-                });
-            }
-            catch (NoSuchEntityException)
             {
                 // No action required
             }

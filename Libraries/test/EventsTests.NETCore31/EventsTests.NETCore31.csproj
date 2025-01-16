@@ -6,16 +6,10 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <RuntimeIdentifiers>win7-x64;win7-x86</RuntimeIdentifiers>
     <RootNamespace>EventsTests31</RootNamespace>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1'">
-    <DefineConstants>NETCOREAPP_2_1</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
-    <DefineConstants>NETCOREAPP_3_1</DefineConstants>
-  </PropertyGroup>
-  
   <ItemGroup>
     <Content Include="../EventsTests.Shared/*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -33,14 +27,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Amazon.Lambda.MQEvents\Amazon.Lambda.MQEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.CloudWatchEvents\Amazon.Lambda.CloudWatchEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.ApplicationLoadBalancerEvents\Amazon.Lambda.ApplicationLoadBalancerEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.CloudWatchLogsEvents\Amazon.Lambda.CloudWatchLogsEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.ConnectEvents\Amazon.Lambda.ConnectEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.Core\Amazon.Lambda.Core.csproj" />
+    <ProjectReference Include="..\..\src\Amazon.Lambda.KafkaEvents\Amazon.Lambda.KafkaEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.KinesisAnalyticsEvents\Amazon.Lambda.KinesisAnalyticsEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.KinesisFirehoseEvents\Amazon.Lambda.KinesisFirehoseEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.LexEvents\Amazon.Lambda.LexEvents.csproj" />
+    <ProjectReference Include="..\..\src\Amazon.Lambda.LexV2Events\Amazon.Lambda.LexV2Events.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.Serialization.Json\Amazon.Lambda.Serialization.Json.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.CognitoEvents\Amazon.Lambda.CognitoEvents.csproj" />
     <ProjectReference Include="..\..\src\Amazon.Lambda.ConfigEvents\Amazon.Lambda.ConfigEvents.csproj" />
@@ -58,10 +55,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.301.14" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
     <PackageReference Include="xunit" Version="2.2.0" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.0" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.302.13" />
   </ItemGroup>
 
   <ItemGroup>

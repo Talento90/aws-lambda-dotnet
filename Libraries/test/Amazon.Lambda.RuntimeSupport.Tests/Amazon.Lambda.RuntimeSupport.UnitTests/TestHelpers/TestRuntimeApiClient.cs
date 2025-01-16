@@ -12,6 +12,7 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+using Amazon.Lambda.RuntimeSupport.Helpers;
 using Amazon.Lambda.RuntimeSupport.UnitTests.TestHelpers;
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,8 @@ namespace Amazon.Lambda.RuntimeSupport.UnitTests
         private IEnvironmentVariables _environmentVariables;
         private Dictionary<string, IEnumerable<string>> _headers;
 
+        public IConsoleLoggerWriter ConsoleLogger { get; } = new LogLevelLoggerWriter();
+
         public TestRuntimeApiClient(IEnvironmentVariables environmentVariables, Dictionary<string, IEnumerable<string>> headers)
         {
             _environmentVariables = environmentVariables;
@@ -35,6 +38,10 @@ namespace Amazon.Lambda.RuntimeSupport.UnitTests
         }
 
         public bool GetNextInvocationAsyncCalled { get; private set; }
+        public bool RestoreNextInvocationAsyncCalled { get; private set; }
+        public bool ReportRestoreErrorAsyncCalled { get; private set; }
+
+
         public bool ReportInitializationErrorAsyncExceptionCalled { get; private set; }
         public bool ReportInitializationErrorAsyncTypeCalled { get; private set; }
         public bool ReportInvocationErrorAsyncExceptionCalled { get; private set; }
@@ -95,8 +102,14 @@ namespace Amazon.Lambda.RuntimeSupport.UnitTests
                     new TestDateTimeHelper(), new Helpers.SimpleLoggerWriter())
             });
         }
+        
+        public Task RestoreNextInvocationAsync(CancellationToken cancellationToken = default)
+        {
+            RestoreNextInvocationAsyncCalled = true;
+            return Task.Run(() => { });
+        }
 
-        public Task ReportInitializationErrorAsync(Exception exception, CancellationToken cancellationToken = default)
+        public Task ReportInitializationErrorAsync(Exception exception, String errorType = null, CancellationToken cancellationToken = default)
         {
             LastRecordedException = exception;
             ReportInitializationErrorAsyncExceptionCalled = true;
@@ -121,6 +134,13 @@ namespace Amazon.Lambda.RuntimeSupport.UnitTests
             ReportInvocationErrorAsyncTypeCalled = true;
             return Task.Run(() => { });
         }
+        
+        public Task ReportRestoreErrorAsync(Exception exception, String errorType = null, CancellationToken cancellationToken = default)
+        {
+            ReportRestoreErrorAsyncCalled = true;
+
+
+            return Task.Run(() => { });        }
 
         public Task SendResponseAsync(string awsRequestId, Stream outputStream, CancellationToken cancellationToken = default)
         {

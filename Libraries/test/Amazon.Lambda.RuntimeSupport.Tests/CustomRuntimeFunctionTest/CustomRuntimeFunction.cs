@@ -28,7 +28,7 @@ namespace CustomRuntimeFunctionTest
 
         private static async Task Main(string[] args)
         {
-            var handler = LambdaEnvironment.Handler;
+            var handler = Environment.GetEnvironmentVariable("TEST_HANDLER");
             LambdaBootstrap bootstrap = null;
             HandlerWrapper handlerWrapper = null;
 
@@ -36,6 +36,15 @@ namespace CustomRuntimeFunctionTest
             {
                 switch (handler)
                 {
+                    case nameof(GetTotalAvailableMemoryBytes):
+                        bootstrap = new LambdaBootstrap(GetTotalAvailableMemoryBytes);
+                        break;
+                    case nameof(ExceptionNonAsciiCharacterUnwrappedAsync):
+                        bootstrap = new LambdaBootstrap(ExceptionNonAsciiCharacterUnwrappedAsync);
+                        break;
+                    case nameof(UnintendedDisposeTest):
+                        bootstrap = new LambdaBootstrap(UnintendedDisposeTest);
+                        break;
                     case nameof(LoggingStressTest):
                         bootstrap = new LambdaBootstrap(LoggingStressTest);
                         break;
@@ -88,6 +97,10 @@ namespace CustomRuntimeFunctionTest
                         break;
                     case nameof(GetTimezoneNameAsync):
                         bootstrap = new LambdaBootstrap(GetTimezoneNameAsync);
+                        break;
+                    case nameof(ThrowUnhandledApplicationException):
+                        handlerWrapper = HandlerWrapper.GetHandlerWrapper((Action)ThrowUnhandledApplicationException);
+                        bootstrap = new LambdaBootstrap(handlerWrapper);
                         break;
                     default:
                         throw new Exception($"Handler {handler} is not supported.");
@@ -172,6 +185,43 @@ namespace CustomRuntimeFunctionTest
 
             return Task.FromResult(GetInvocationResponse(nameof(LoggingTest), true));
         }
+
+        private static Task<InvocationResponse> UnintendedDisposeTest(InvocationRequest invocation)
+        {
+            int errorCode = new NUnitLite.AutoRun().Execute(new string[] { "--noresult" });
+            Console.WriteLine("This is standard output stream.");
+
+            return Task.FromResult(GetInvocationResponse(nameof(UnintendedDisposeTest), true));
+        }
+
+        public class WrapTextWriter : TextWriter
+        {
+            TextWriter _textWriter;
+            public WrapTextWriter(TextWriter textWriter)
+            {
+                _textWriter = textWriter;
+            }
+            public override Encoding Encoding => UTF8Encoding.UTF8;
+
+            protected override void Dispose(bool disposing)
+            {
+                if(disposing)
+                {
+                    _textWriter.Dispose();
+                }
+            }
+
+            public override async ValueTask DisposeAsync()
+            {
+                await _textWriter.DisposeAsync();
+            }
+
+            public override void Close()
+            {
+                _textWriter.Close();
+            }
+        }
+
 
         private static Task<InvocationResponse> ToUpperAsync(InvocationRequest invocation)
         {
@@ -304,6 +354,13 @@ namespace CustomRuntimeFunctionTest
             throw new Exception("Exception thrown from an async handler.");
         }
 
+        private static async Task<InvocationResponse> ExceptionNonAsciiCharacterUnwrappedAsync(InvocationRequest invocation)
+        {
+            // do something async so this function is compiled as async
+            var dummy = await Task.FromResult("xyz");
+            throw new Exception("Unhandled exception with non ASCII character: ♂");
+        }
+
         private static void AggregateExceptionUnwrapped()
         {
             throw new Exception("Exception thrown from a synchronous handler.");
@@ -319,6 +376,11 @@ namespace CustomRuntimeFunctionTest
         private static void AggregateExceptionNotUnwrapped()
         {
             throw new AggregateException("AggregateException thrown from a synchronous handler.");
+        }
+
+        private static void ThrowUnhandledApplicationException()
+        {
+            throw new ApplicationException("Function fail");
         }
 
         private static Task<InvocationResponse> TooLargeResponseBodyAsync(InvocationRequest invocation)
@@ -374,6 +436,11 @@ namespace CustomRuntimeFunctionTest
         private static Task<InvocationResponse> GetTimezoneNameAsync(InvocationRequest invocation)
         {
             return Task.FromResult(GetInvocationResponse(nameof(GetTimezoneNameAsync), TimeZoneInfo.Local.Id));
+        }
+
+        private static async Task<InvocationResponse> GetTotalAvailableMemoryBytes(InvocationRequest invocation)
+        {
+            return GetInvocationResponse(nameof(GetTotalAvailableMemoryBytes), GC.GetGCMemoryInfo().TotalAvailableMemoryBytes.ToString());
         }
 
         #region Helpers

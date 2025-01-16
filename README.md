@@ -1,4 +1,4 @@
-# AWS Lambda for .NET Core [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/aws/aws-lambda-dotnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# AWS Lambda for .NET
 
 Repository for the AWS NuGet packages and Blueprints to support writing AWS Lambda functions using .NET Core.
 
@@ -12,6 +12,7 @@ For a history of releases view the [release change log](RELEASE.CHANGELOG.md)
     - [Amazon.Lambda.Tools](#amazonlambdatools)
       - [Global Tool Migration](#global-tool-migration)
         - [Migrating from DotNetCliToolReference](#migrating-from-dotnetclitoolreference)
+    - [Amazon.Lambda.Annotations](#amazonlambdaannotations)
     - [Amazon.Lambda.AspNetCoreServer](#amazonlambdaaspnetcoreserver)
     - [Amazon.Lambda.TestUtilities](#amazonlambdatestutilities)
   - [Blueprints](#blueprints)
@@ -44,10 +45,11 @@ These are the packages and their README.md files:
 * [Amazon.Lambda.SimpleEmailEvents](Libraries/src/Amazon.Lambda.SimpleEmailEvents) - [README.md](Libraries/src/Amazon.Lambda.SimpleEmailEvents/README.md)
 * [Amazon.Lambda.SNSEvents](Libraries/src/Amazon.Lambda.SNSEvents) - [README.md](Libraries/src/Amazon.Lambda.SNSEvents/README.md)
 * [Amazon.Lambda.SQSEvents](Libraries/src/Amazon.Lambda.SQSEvents) - [README.md](Libraries/src/Amazon.Lambda.SQSEvents/README.md)
+* [Amazon.Lambda.KafkaEvents](Libraries/src/Amazon.Lambda.KafkaEvents) - [README.md](Libraries/src/Amazon.Lambda.KafkaEvents/README.md)
 
 ### Amazon.Lambda.Tools
 
-Package adds commands to the dotnet cli that can be used manage Lambda functions including deploying a function from the dotnet cli. 
+Package adds commands to the dotnet cli that can be used to manage Lambda functions including deploying a function from the dotnet cli. 
 For more information see the [README.md](Libraries/src/Amazon.Lambda.Tools/README.md) file for Amazon.Lambda.Tools.
 
 #### Global Tool Migration
@@ -85,13 +87,20 @@ To migrate an existing project away from the older project tool, you need to edi
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0" />
-    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.3.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="2.1.0" />
   </ItemGroup>
 </Project>
 ```
 To migrate this project, you need to delete the **DotNetCliToolReference** element, including **Amazon.Lambda.Tools**. If you don't remove this line, the older project tool version of **Amazon.Lambda.Tools** will be used instead of an installed Global Tool.
 
 The AWS Toolkit for Visual Studio before .NET Core 2.1 would look for the presence of **Amazon.Lambda.Tools** in the project file to determine whether to show the Lambda deployment menu item. Because we knew we were going to switch to Global Tools, and the reference to **Amazon.Lambda.Tools** in the project was going away, we added the **AWSProjectType** property to the project file. The current version of the AWS Toolkit for Visual Studio now looks for either the presence of **Amazon.Lambda.Tools** or the **AWSProjectType** set to **Lambda**. Make sure when removing the **DotNetCliToolReference** that your project file has the **AWSProjectType** property to continue deploying with the AWS Toolkit for Visual Studio.
+
+### Amazon.Lambda.Annotations
+
+The Lambda Annotations library allows C# functions to use .NET attributes for a more idiomatic experience
+writing Lambda functions. This includes dependency injection integration, simplified access to Lambda event
+information and automatic synchronization with CloudFormation template.
+For more information see the [README.md](Libraries/src/Amazon.Lambda.Annotations/README.md) file for Amazon.Lambda.Annotations.
 
 ### Amazon.Lambda.AspNetCoreServer
 
@@ -119,46 +128,68 @@ dotnet new -i "Amazon.Lambda.Templates::*"
 
 The ::* on the end of the command indicates the latest version of the NuGet package.
 
-To see a list of the Lambda templates execute **dotnet new lambda --list**
+To see a list of the Lambda templates execute **dotnet new list --author AWS**
 
 ```
-> dotnet new lambda --list                                                                                             
-Templates                                                 Short Name                              Language          Tags
+> dotnet new list --author AWS              
 
----------------------------------------------------------------------------------------------------------------------------------------------------------
-Order Flowers Chatbot Tutorial                            lambda.OrderFlowersChatbot              [C#]              AWS/Lambda/Function
+Template Name                                                                         Short Name                                    Language  Tags                 
+------------------------------------------------------------------------------------  --------------------------------------------  --------  ---------------------
+Empty Top-level Function                                                              lambda.EmptyTopLevelFunction                  [C#]      AWS/Lambda/Serverless
 
-Lambda Detect Image Labels                                lambda.DetectImageLabels                [C#], F#          AWS/Lambda/Function
+Lambda Annotations Framework (Preview)                                                serverless.Annotations                        [C#]      AWS/Lambda/Serverless
 
-Lambda Empty Function                                     lambda.EmptyFunction                    [C#], F#          AWS/Lambda/Function
+Lambda ASP.NET Core Minimal API                                                       serverless.AspNetCoreMinimalAPI               [C#]      AWS/Lambda/Serverless
 
-Lex Book Trip Sample                                      lambda.LexBookTripSample                [C#]              AWS/Lambda/Function
+Lambda ASP.NET Core Web API                                                           serverless.AspNetCoreWebAPI                   [C#],F#   AWS/Lambda/Serverless
 
-Lambda Simple DynamoDB Function                           lambda.DynamoDB                         [C#], F#          AWS/Lambda/Function
+Lambda ASP.NET Core Web API (.NET 6 Container Image)                                  serverless.image.AspNetCoreWebAPI             [C#],F#   AWS/Lambda/Serverless
 
-Lambda Simple Kinesis Firehose Function                   lambda.KinesisFirehose                  [C#]              AWS/Lambda/Function
+Lambda ASP.NET Core Web Application with Razor Pages                                  serverless.AspNetCoreWebApp                   [C#]      AWS/Lambda/Serverless
 
-Lambda Simple Kinesis Function                            lambda.Kinesis                          [C#], F#          AWS/Lambda/Function
+Lambda Custom Runtime Function (.NET 7)                                               lambda.CustomRuntimeFunction                  [C#],F#   AWS/Lambda/Function  
 
-Lambda Simple S3 Function                                 lambda.S3                               [C#], F#          AWS/Lambda/Function
+Lambda Detect Image Labels                                                            lambda.DetectImageLabels                      [C#],F#   AWS/Lambda/Function
 
-Lambda Simple SQS Function                                lambda.SQS                              [C#]              AWS/Lambda/Function
+Lambda Empty Function                                                                 lambda.EmptyFunction                          [C#],F#   AWS/Lambda/Function
 
-Lambda ASP.NET Core Web API                               serverless.AspNetCoreWebAPI             [C#], F#          AWS/Lambda/Serverless
+Lambda Empty Function (.NET 7 Container Image)                                        lambda.image.EmptyFunction                    [C#],F#   AWS/Lambda/Function
 
-Lambda ASP.NET Core Web Application with Razor Pages      serverless.AspNetCoreWebApp             [C#]              AWS/Lambda/Serverless
+Lambda Empty Serverless                                                               serverless.EmptyServerless                    [C#],F#   AWS/Lambda/Serverless
 
-Serverless Detect Image Labels                            serverless.DetectImageLabels            [C#], F#          AWS/Lambda/Serverless
+Lambda Empty Serverless (.NET 7 Container Image)                                      serverless.image.EmptyServerless              [C#],F#   AWS/Lambda/Serverless
 
-Lambda DynamoDB Blog API                                  serverless.DynamoDBBlogAPI              [C#]              AWS/Lambda/Serverless
+Lambda Function project configured for deployment using .NET 7's Native AOT feature.  lambda.NativeAOT                              [C#],F#   AWS/Lambda/Function
 
-Lambda Empty Serverless                                   serverless.EmptyServerless              [C#], F#          AWS/Lambda/Serverless
+Lambda Giraffe Web App                                                                serverless.Giraffe                            F#        AWS/Lambda/Serverless
 
-Lambda Giraffe Web App                                    serverless.Giraffe                      F#                AWS/Lambda/Serverless
+Lambda Simple Application Load Balancer Function                                      lambda.SimpleApplicationLoadBalancerFunction  [C#]      AWS/Lambda/Function
 
-Serverless Simple S3 Function                             serverless.S3                           [C#], F#          AWS/Lambda/Serverless
+Lambda Simple DynamoDB Function                                                       lambda.DynamoDB                               [C#],F#   AWS/Lambda/Function
 
-Step Functions Hello World                                serverless.StepFunctionsHelloWorld      [C#], F#          AWS/Lambda/Serverless
+Lambda Simple Kinesis Firehose Function                                               lambda.KinesisFirehose                        [C#]      AWS/Lambda/Function
+
+Lambda Simple Kinesis Function                                                        lambda.Kinesis                                [C#],F#   AWS/Lambda/Function
+
+Lambda Simple S3 Function                                                             lambda.S3                                     [C#],F#   AWS/Lambda/Function
+
+Lambda Simple SNS Function                                                            lambda.SNS                                    [C#]      AWS/Lambda/Function
+
+Lambda Simple SQS Function                                                            lambda.SQS                                    [C#]      AWS/Lambda/Function
+
+Lex Book Trip Sample                                                                  lambda.LexBookTripSample                      [C#]      AWS/Lambda/Function
+
+Order Flowers Chatbot Tutorial                                                        lambda.OrderFlowersChatbot                    [C#]      AWS/Lambda/Function
+
+Serverless Detect Image Labels                                                        serverless.DetectImageLabels                  [C#],F#   AWS/Lambda/Serverless
+
+Serverless project configured for deployment using .NET 7's Native AOT feature.       serverless.NativeAOT                          [C#],F#   AWS/Lambda/Serverless
+
+Serverless Simple S3 Function                                                         serverless.S3                                 [C#],F#   AWS/Lambda/Serverless
+
+Serverless WebSocket API                                                              serverless.WebSocketAPI                       [C#]      AWS/Lambda/Serverless
+
+Step Functions Hello World                                                            serverless.StepFunctionsHelloWorld            [C#],F#   AWS/Lambda/Serverless
 ```
 
 To get details about a template, you can use the help command.

@@ -11,14 +11,43 @@
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)alb-request-multi-value.json" />
     <Content Include="$(MSBuildThisFileDirectory)alb-request-single-value.json" />
+    <Content Include="$(MSBuildThisFileDirectory)amazonmq-rabbitmq.json" />
     <Content Include="$(MSBuildThisFileDirectory)batch-job-state-change-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-createauthchallenge-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-customsmssender-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-customemailsender-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-custommessage-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-defineauthchallenge-event-with-null-values.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-migrateuser-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-pretokengeneration-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-verifyauthchallenge-event-with-null-values.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-pretokengenerationv2-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-verifyauthchallenge-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-postconfirmation-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-postauthentication-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-preauthentication-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-defineauthchallenge-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)cognito-presignup-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)cognito-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)config-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)dynamodb-with-ms-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)kinesis-batchitemfailures-response.json" />
     <Content Include="$(MSBuildThisFileDirectory)dynamodb-batchitemfailures-response.json" />
     <Content Include="$(MSBuildThisFileDirectory)dynamodb-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)ecs-container-state-change-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)ecs-task-state-change-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)dynamodb-timewindow-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)dynamodb-timewindow-response.json" />
+    <Content Include="$(MSBuildThisFileDirectory)kinesis-timewindow-response.json" />
+    <Content Include="$(MSBuildThisFileDirectory)kinesis-timewindow-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)websocket-api-connect-request.json" />
+    <Content Include="$(MSBuildThisFileDirectory)custom-authorizer-v2-iam-response.json" />
+    <Content Include="$(MSBuildThisFileDirectory)custom-authorizer-v2-simple-response.json" />
+    <Content Include="$(MSBuildThisFileDirectory)custom-authorizer-v2-request.json" />
+    <Content Include="$(MSBuildThisFileDirectory)http-api-v2-request-iam-authorizer.json" />
+    <Content Include="$(MSBuildThisFileDirectory)http-api-v2-request-lambda-authorizer.json" />
     <Content Include="$(MSBuildThisFileDirectory)http-api-v2-request.json" />
+    <Content Include="$(MSBuildThisFileDirectory)amazonmq-activemq.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-analytics-firehoseinputpreprocessing-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-analytics-inputpreprocessing-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-analytics-inputpreprocessing-response.json" />
@@ -26,10 +55,13 @@
     <Content Include="$(MSBuildThisFileDirectory)kinesis-analytics-outputdelivery-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-analytics-outputdelivery-response.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-analytics-streamsinputpreprocessing-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)kafka-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-firehose-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)kinesis-firehose-response.json" />
+    <Content Include="$(MSBuildThisFileDirectory)lexv2-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)lex-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)lexv2-response.json" />
     <Content Include="$(MSBuildThisFileDirectory)lex-response.json" />
     <Content Include="$(MSBuildThisFileDirectory)logs-event.json" />
     <Content Include="$(MSBuildThisFileDirectory)proxy-event.json" />
@@ -39,9 +71,11 @@
     <Content Include="$(MSBuildThisFileDirectory)simple-email-event-lambda.json" />
     <Content Include="$(MSBuildThisFileDirectory)simple-email-event-s3.json" />
     <Content Include="$(MSBuildThisFileDirectory)sns-event.json" />
+    <Content Include="$(MSBuildThisFileDirectory)sqs-response.json" />
     <Content Include="$(MSBuildThisFileDirectory)sqs-event.json" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)EventTests.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DynamoDBEventJsonTests.cs" />
   </ItemGroup>
 </Project>

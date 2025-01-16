@@ -194,7 +194,19 @@ function _deployProject
 
         $amazonLambdaToolsPath = _configureAmazonLambdaTools
 
-        $env:AWS_EXECUTION_ENV="AWSLambdaPSCore"
+        $moduleVersion = "Unknown"
+        $module = $MyInvocation.MyCommand.Module
+        if ($module) {
+            $moduleVersion = $module.Version.ToString()
+        }
+        
+        $userAgent = "lib/AWSLambdaPSCore#$moduleVersion"
+        if ($env:AWS_EXECUTION_ENV) {
+            $env:AWS_EXECUTION_ENV += " $userAgent"
+        } else { 
+            $env:AWS_EXECUTION_ENV = "AWSLambdaPSCore $userAgent"
+        }
+
         try
         {
             if ($DisableInteractive)
@@ -250,8 +262,7 @@ function _packageProject
     }
     try
     {
-        $arguments = $Name
-        $arguments += " --configuration Release --framework $AwsPowerShellTargetFramework --function-runtime $AwsPowerShellLambdaRuntime"
+        $arguments = " --configuration Release --framework $AwsPowerShellTargetFramework --function-runtime $AwsPowerShellLambdaRuntime"
 
         if (($OutputPackage))
         {
@@ -598,10 +609,10 @@ function _validateDotnetInstall
     $application = Get-Command -Name dotnet
     if (!($application))
     {
-        throw '.NET Core 3.1 SDK was not found which is required to build the PowerShell Lambda package bundle. Download the .NET Core 3.1 SDK from https://www.microsoft.com/net/download'
+        throw '.NET 6 SDK was not found which is required to build the PowerShell Lambda package bundle. Download the .NET 6 SDK from https://www.microsoft.com/net/download'
     }
 
-    $minVersion = [System.Version]::Parse('3.1.100')
+    $minVersion = [System.Version]::Parse('6.0.100')
     $foundMin = $false
 
     $installedSDKs = & dotnet --list-sdks
@@ -619,7 +630,7 @@ function _validateDotnetInstall
 
     if (!($foundMin))
     {
-        throw 'The installed .NET Core SDK does not meet the minimum requirement to build the PowerShell Lambda package bundle. Download the .NET Core 3.1 SDK from https://www.microsoft.com/net/download'
+        throw 'The installed .NET SDK does not meet the minimum requirement to build the PowerShell Lambda package bundle. Download the .NET 6 SDK from https://www.microsoft.com/net/download'
     }
 }
 

@@ -31,6 +31,15 @@ namespace Amazon.Lambda.RuntimeSupport.Bootstrap
     {
         public static bool IsCallPreJit()
         {
+#if NET6_0_OR_GREATER
+            // If we are running in an AOT environment, there is no point in doing any prejit optmization
+            // and will most likely cause errors using APIs that are not supported in AOT.
+            if(NativeAotHelper.IsRunningNativeAot())
+            {
+                return false;
+            }    
+#endif
+
             string awsLambdaDotNetPreJitStr = Environment.GetEnvironmentVariable(ENVIRONMENT_VARIABLE_AWS_LAMBDA_DOTNET_PREJIT);
             string awsLambdaInitTypeStr = Environment.GetEnvironmentVariable(ENVIRONMENT_VARIABLE_AWS_LAMBDA_INITIALIZATION_TYPE);
             AwsLambdaDotNetPreJit awsLambdaDotNetPreJit;
@@ -131,6 +140,9 @@ namespace Amazon.Lambda.RuntimeSupport.Bootstrap
             }
         }
 
+#if NET8_0_OR_GREATER
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("PreJitAssembly is not used for Native AOT")]
+#endif
         public static void PreJitAssembly(Assembly a)
         {
             // Storage to ensure not loading the same assembly twice and optimize calls to GetAssemblies()

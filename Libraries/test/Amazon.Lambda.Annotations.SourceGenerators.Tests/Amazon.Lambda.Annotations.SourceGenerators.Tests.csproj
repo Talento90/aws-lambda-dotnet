@@ -1,0 +1,198 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+        <LangVersion>latest</LangVersion>
+
+        <!--This assembly needs to access internal methods inside the Amazon.Lambda.Annotations assembly.
+    Both these assemblies need to be strongly signed for the InternalsVisibleTo attribute to take effect.-->
+        <AssemblyOriginatorKeyFile>..\..\..\buildtools\public.snk</AssemblyOriginatorKeyFile>
+        <SignAssembly>true</SignAssembly>
+	</PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+        <PackageReference Include="Moq" Version="4.18.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+        <PackageReference Include="System.Memory" Version="4.5.5" />
+        <PackageReference Include="System.Text.Json" Version="8.0.5" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="AWSSDK.Core" Version="3.7.103.24" />
+        <PackageReference Include="xunit" Version="2.4.2" />
+        <PackageReference Include="Microsoft.CodeAnalysis" Version="4.0.1" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.1" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.1" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeRefactoring.Testing.XUnit" Version="1.1.1" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" Version="1.1.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+		<PackageReference Include="YamlDotNet" Version="12.3.1" />
+	</ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\TestServerlessApp\**">
+            <Link>TestServerlessApp\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Remove="..\TestServerlessApp\obj\**" />
+        <Content Remove="..\TestServerlessApp\bin\**" />
+        <Content Remove="..\TestServerlessApp\serverless.template" />
+
+        <Content Include="..\TestServerlessApp.NET8\**">
+            <Link>TestServerlessApp.NET8\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Remove="..\TestServerlessApp.NET8\obj\**" />
+        <Content Remove="..\TestServerlessApp.NET8\bin\**" />
+        <Content Remove="..\TestServerlessApp.NET8\serverless.template" />
+
+        <Content Include="..\TestExecutableServerlessApp\**">
+            <Link>TestExecutableServerlessApp\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Remove="..\TestExecutableServerlessApp\obj\**" />
+        <Content Remove="..\TestExecutableServerlessApp\bin\**" />
+        <Content Remove="..\TestExecutableServerlessApp\serverless.template" />
+
+		<Content Include="..\NonCompilableCodeFile.cs">
+			<Link>NonCompilableCodeFile.cs</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\Program.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\Functions_AsyncStartupToUpper_Generated.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ServerlessTemplates\subnamespace_executable.template">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\Functions_AsyncStartupToLower_Generated.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ProgramZipOutput.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ServerlessTemplates\subnamespace_executableimage.template">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ServerlessTemplates\greeter_executable.template">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\GreeterExecutable_SayHello_Generated.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\GreeterExecutable_SayHelloAsync_Generated.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ParameterlessMethods_ToUpper_Generated.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ProgramParameterless.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ServerlessTemplates\parameterless.template">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ParameterlessMethodWithResponse_ToUpper_Generated.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ProgramParameterlessWithResponse.g.cs">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Update="Snapshots\ServerlessTemplates\parameterlesswithresponse.template">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\src\Amazon.Lambda.RuntimeSupport\**">
+            <Link>Amazon.Lambda.RuntimeSupport\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Remove="..\..\src\Amazon.Lambda.RuntimeSupport\obj\**" />
+        <Content Remove="..\..\src\Amazon.Lambda.RuntimeSupport\bin\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\src\Amazon.Lambda.Annotations\**">
+            <Link>Amazon.Lambda.Annotations\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Remove="..\..\src\Amazon.Lambda.Annotations\obj\**" />
+        <Content Remove="..\..\src\Amazon.Lambda.Annotations\bin\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Snapshots\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="Snapshots\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Snapshots\ServerlessTemplates\customizeResponse.template" />
+      <None Remove="Snapshots\ServerlessTemplates\dynamicexample.template" />
+      <None Remove="Snapshots\ServerlessTemplates\intrinsicexample.template" />
+      <None Remove="Snapshots\ServerlessTemplates\net8.template" />
+      <None Remove="Snapshots\ServerlessTemplates\nullreferenceexample.template" />
+      <None Remove="Snapshots\ServerlessTemplates\sourcegeneratorserializationexample.template" />
+      <None Remove="Snapshots\ServerlessTemplates\sqsEvents.template" />
+      <None Remove="Snapshots\ServerlessTemplates\subnamespace.template" />
+      <None Remove="Snapshots\ServerlessTemplates\taskexample.template" />
+      <None Remove="Snapshots\ServerlessTemplates\voidexample - Copy.template" />
+      <None Update="WriterTests\snapshot.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="WriterTests\snapshot.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Snapshots\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Amazon.Lambda.Annotations.SourceGenerator\Amazon.Lambda.Annotations.SourceGenerator.csproj" />
+      <ProjectReference Include="..\..\src\Amazon.Lambda.Annotations\Amazon.Lambda.Annotations.csproj" />
+      <ProjectReference Include="..\..\src\Amazon.Lambda.APIGatewayEvents\Amazon.Lambda.APIGatewayEvents.csproj" />
+      <ProjectReference Include="..\..\src\Amazon.Lambda.SQSEvents\Amazon.Lambda.SQSEvents.csproj" />
+      <!-- 
+	    We need to force using the .NET Standard 2.0 version because the source generator test framework will complain
+		about using newer versions of System.Runtime then it can handle. This is not an issue in a end user scenario.
+	  -->
+      <ProjectReference Include="..\..\src\Amazon.Lambda.Core\Amazon.Lambda.Core.csproj" AdditionalProperties="TargetFramework=netstandard2.0" />
+      <ProjectReference Include="..\..\src\Amazon.Lambda.RuntimeSupport\Amazon.Lambda.RuntimeSupport.csproj" />
+      <ProjectReference Include="..\..\src\Amazon.Lambda.Serialization.SystemTextJson\Amazon.Lambda.Serialization.SystemTextJson.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="Snapshots\VoidExample_VoidReturn_Generated.g.cs">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+
+</Project>

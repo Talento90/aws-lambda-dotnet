@@ -116,16 +116,25 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
         }
 
         [Theory]
-        [InlineData("values-get-aggregateerror-httpapi-v2-request.json", "AggregateException")]
-        [InlineData("values-get-typeloaderror-httpapi-v2-request.json", "ReflectionTypeLoadException")]
-        public async Task TestEnhancedExceptions(string requestFileName, string expectedExceptionType)
+        [InlineData("values-get-aggregateerror-httpapi-v2-request.json", "AggregateException", true)]
+        [InlineData("values-get-typeloaderror-httpapi-v2-request.json", "ReflectionTypeLoadException", true)]
+        [InlineData("values-get-aggregateerror-httpapi-v2-request.json", "AggregateException", false)]
+        [InlineData("values-get-typeloaderror-httpapi-v2-request.json", "ReflectionTypeLoadException", false)]
+        public async Task TestEnhancedExceptions(string requestFileName, string expectedExceptionType, bool configureApiToReturnExceptionDetail)
         {
-            var response = await this.InvokeAPIGatewayRequest(requestFileName);
+            var response = await this.InvokeAPIGatewayRequest(requestFileName, configureApiToReturnExceptionDetail);
 
             Assert.Equal(500, response.StatusCode);
             Assert.Equal(string.Empty, response.Body);
+            if (configureApiToReturnExceptionDetail)
+            {
             Assert.True(response.Headers.ContainsKey("ErrorType"));
             Assert.Equal(expectedExceptionType, response.Headers["ErrorType"]);
+        }
+            else
+            {
+                Assert.False(response.Headers.ContainsKey("ErrorType"));
+            }
         }
 
         [Fact]
@@ -173,6 +182,21 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
             var root = JObject.Parse(response.Body);
             Assert.Equal("/beta", root["PathBase"]?.ToString());
             Assert.Equal("/foo/", root["Path"]?.ToString());
+        }
+
+        [Theory]
+        [InlineData("rawtarget-escaped-percent-in-path-httpapi-v2.json", "/foo%25bar")]
+        [InlineData("rawtarget-escaped-percent-slash-in-path-httpapi-v2.json", "/foo%25%2Fbar")]
+        [InlineData("rawtarget-escaped-reserved-in-query-httpapi-v2.json", "/foo/bar?foo=b%40r")]
+        [InlineData("rawtarget-escaped-slash-in-path-httpapi-v2.json", "/foo%2Fbar")]
+        public async Task TestRawTarget(string requestFileName, string expectedRawTarget)
+        {
+            var response = await this.InvokeAPIGatewayRequest(requestFileName);
+
+            Assert.Equal(200, response.StatusCode);
+
+            var root = JObject.Parse(response.Body);
+            Assert.Equal(expectedRawTarget, root["RawTarget"]?.ToString());
         }
 
         [Fact]
@@ -235,19 +259,44 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
             Assert.Equal("TestValue3", response.Body);
         }
 
-        private async Task<APIGatewayHttpApiV2ProxyResponse> InvokeAPIGatewayRequest(string fileName)
+        [Fact]
+        public async Task TestTraceIdSetFromLambdaContext()
         {
-            return await InvokeAPIGatewayRequestWithContent(new TestLambdaContext(), GetRequestContent(fileName));
+            try
+            {
+                Environment.SetEnvironmentVariable("_X_AMZN_TRACE_ID", "MyTraceId-1");
+                var response = await this.InvokeAPIGatewayRequest("traceid-get-httpapi-v2-request.json");
+                Assert.Equal("MyTraceId-1", response.Body);
+
+                Environment.SetEnvironmentVariable("_X_AMZN_TRACE_ID", "MyTraceId-2");
+                response = await this.InvokeAPIGatewayRequest("traceid-get-httpapi-v2-request.json");
+                Assert.Equal("MyTraceId-2", response.Body);
+
+                Environment.SetEnvironmentVariable("_X_AMZN_TRACE_ID", null);
+                response = await this.InvokeAPIGatewayRequest("traceid-get-httpapi-v2-request.json");
+                Assert.True(!string.IsNullOrEmpty(response.Body) && !string.Equals(response.Body, "MyTraceId-2"));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("_X_AMZN_TRACE_ID", null);
+            }
         }
 
-        private async Task<APIGatewayHttpApiV2ProxyResponse> InvokeAPIGatewayRequest(TestLambdaContext context, string fileName)
+        private async Task<APIGatewayHttpApiV2ProxyResponse> InvokeAPIGatewayRequest(string fileName, bool configureApiToReturnExceptionDetail = false)
         {
-            return await InvokeAPIGatewayRequestWithContent(context, GetRequestContent(fileName));
+            return await InvokeAPIGatewayRequestWithContent(new TestLambdaContext(), GetRequestContent(fileName), configureApiToReturnExceptionDetail);
         }
 
-        private async Task<APIGatewayHttpApiV2ProxyResponse> InvokeAPIGatewayRequestWithContent(TestLambdaContext context, string requestContent)
+        private async Task<APIGatewayHttpApiV2ProxyResponse> InvokeAPIGatewayRequest(TestLambdaContext context, string fileName, bool configureApiToReturnExceptionDetail = false)
+        {
+            return await InvokeAPIGatewayRequestWithContent(context, GetRequestContent(fileName), configureApiToReturnExceptionDetail);
+        }
+
+        private async Task<APIGatewayHttpApiV2ProxyResponse> InvokeAPIGatewayRequestWithContent(TestLambdaContext context, string requestContent, bool configureApiToReturnExceptionDetail = false)
         {
             var lambdaFunction = new TestWebApp.HttpV2LambdaFunction();
+            if (configureApiToReturnExceptionDetail)
+                lambdaFunction.IncludeUnhandledExceptionDetailInResponse = true;
             var requestStream = new MemoryStream(System.Text.UTF8Encoding.UTF8.GetBytes(requestContent));
             var request = new Amazon.Lambda.Serialization.SystemTextJson.LambdaJsonSerializer().Deserialize<APIGatewayHttpApiV2ProxyRequest>(requestStream);
 

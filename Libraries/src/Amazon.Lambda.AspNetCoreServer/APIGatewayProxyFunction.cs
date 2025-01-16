@@ -154,13 +154,21 @@ namespace Amazon.Lambda.AspNetCoreServer
                 requestFeatures.Method = apiGatewayRequest.HttpMethod;
 
                 string path = null;
-                if (apiGatewayRequest.PathParameters != null && apiGatewayRequest.PathParameters.ContainsKey("proxy") &&
+
+                // Replaces {proxy+} in path, if exists
+                if (apiGatewayRequest.PathParameters != null && apiGatewayRequest.PathParameters.TryGetValue("proxy", out var proxy) &&
                     !string.IsNullOrEmpty(apiGatewayRequest.Resource))
                 {
-                    var proxyPath = apiGatewayRequest.PathParameters["proxy"];
+                    var proxyPath = proxy;
                     path = apiGatewayRequest.Resource.Replace("{proxy+}", proxyPath);
-                }
 
+                    // Adds all the rest of non greedy parameters in apiGateway.Resource to the path
+                    foreach (var pathParameter in apiGatewayRequest.PathParameters.Where(pp => pp.Key != "proxy"))
+                    {
+                        path = path.Replace($"{{{pathParameter.Key}}}", pathParameter.Value);
+                    }
+                }
+ 
                 if (string.IsNullOrEmpty(path))
                 {
                     path = apiGatewayRequest.Path;
@@ -171,6 +179,11 @@ namespace Amazon.Lambda.AspNetCoreServer
                     path = "/" + path;
                 }
 
+                var rawQueryString = Utilities.CreateQueryStringParameters(
+                    apiGatewayRequest.QueryStringParameters, apiGatewayRequest.MultiValueQueryStringParameters, true);
+
+                requestFeatures.RawTarget = apiGatewayRequest.Path + rawQueryString;
+                requestFeatures.QueryString = rawQueryString;
                 requestFeatures.Path = path;
 
                 requestFeatures.PathBase = string.Empty;
@@ -198,9 +211,6 @@ namespace Amazon.Lambda.AspNetCoreServer
                 }
 
                 requestFeatures.Path = Utilities.DecodeResourcePath(requestFeatures.Path);
-
-                requestFeatures.QueryString = Utilities.CreateQueryStringParameters(
-                    apiGatewayRequest.QueryStringParameters, apiGatewayRequest.MultiValueQueryStringParameters, true);
 
                 Utilities.SetHeadersCollection(requestFeatures.Headers, apiGatewayRequest.Headers, apiGatewayRequest.MultiValueHeaders);
 
@@ -242,9 +252,9 @@ namespace Amazon.Lambda.AspNetCoreServer
                     connectionFeatures.RemoteIpAddress = remoteIpAddress;
                 }
 
-                if (apiGatewayRequest?.Headers?.ContainsKey("X-Forwarded-Port") == true)
+                if (apiGatewayRequest?.Headers?.TryGetValue("X-Forwarded-Port", out var forwardedPort) == true)
                 {
-                    connectionFeatures.RemotePort = int.Parse(apiGatewayRequest.Headers["X-Forwarded-Port"]);
+                    connectionFeatures.RemotePort = int.Parse(forwardedPort, CultureInfo.InvariantCulture);
                 }
 
                 // Call consumers customize method in case they want to change how API Gateway's request
@@ -253,7 +263,7 @@ namespace Amazon.Lambda.AspNetCoreServer
             }
 
             {
-                var tlsConnectionFeature = (ITlsConnectionFeature) features;
+                var tlsConnectionFeature = (ITlsConnectionFeature)features;
                 var clientCertPem = apiGatewayRequest?.RequestContext?.Identity?.ClientCert?.ClientCertPem;
                 if (clientCertPem != null)
                 {

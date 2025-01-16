@@ -12,10 +12,7 @@ param (
     [string] $Architecture,
                           
     [Parameter(HelpMessage = ".NET version")]
-    [string] $Framework,
-                                                 
-    [Parameter(HelpMessage = ".NET channel")]
-    [string] $Channel
+    [string] $Framework
 )
 
 # Change the ErrorActionPreference to 'Stop' to allow aborting script on error
@@ -30,6 +27,16 @@ if (!$?)
 }
 
 $SourceNameTagPair = "aws-lambda-${Framework}:latest"
+
+# Check if the repository exists
+aws ecr describe-repositories --repository-names $EcrRepositoryName --region $StageRegion
+if (!$?) {
+    Write-Output "Repository '$EcrRepositoryName' does not exist. Creating it..."
+    aws ecr create-repository --repository-name $EcrRepositoryName --region $StageRegion
+}
+else {
+    Write-Output "Repository '$EcrRepositoryName' exists."
+}
 
 # Build runtime docker image
 try

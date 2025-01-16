@@ -15,7 +15,7 @@ namespace Amazon.Lambda.S3Events
         /// <summary>
         /// The Amazon S3 request ID for this request. We recommend that you log this value to help with debugging.
         /// </summary>
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER
         [System.Text.Json.Serialization.JsonPropertyName("xAmzRequestId")]
 #endif
         public string XAmzRequestId { get; set; }
@@ -89,7 +89,7 @@ namespace Amazon.Lambda.S3Events
             public string SupportingAccessPointArn { get; set; }
 
             /// <summary>
-            /// ustom data that is applied to the S3 Object Lambda access point configuration. S3 Object Lambda treats 
+            /// Custom data that is applied to the S3 Object Lambda access point configuration. S3 Object Lambda treats 
             /// this as an opaque string, so it might need to be decoded before use.
             /// </summary>
             public string Payload { get; set; }

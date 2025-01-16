@@ -2,8 +2,8 @@ param(
     [ValidateSet('amd64','arm64')]
     [string]$Architecture = "amd64",
 
-    [ValidateSet('net5','net6')]
-    [string]$TargetFramework = "net5"
+    [ValidateSet('net6', 'net8', 'net9')]
+    [string]$TargetFramework = "net6"
 )
 
 function Write-Status($string)
@@ -25,18 +25,7 @@ try
 
     if (Test-Path -Path (Join-Path $PWD -ChildPath '.\LambdaRuntimeDockerfiles\Images\' | Join-Path -ChildPath $TargetFramework | Join-Path -ChildPath  $Architecture | Join-Path -ChildPath 'Dockerfile') -PathType Leaf)
     {
-		if ($TargetFramework -eq "net6")
-		{
-			$Tag = "dotnet6-runtime:base-image-$Architecture"
-		}
-		elseif($TargetFramework -eq "net5")
-		{
-			$Tag = "dotnet5.0-runtime:base-image-$Architecture"
-		}
-		else
-		{
-			throw "Unable to determine tag for target framework $TargetFramework" 
-		}
+		$Tag = "dot$TargetFramework-runtime:base-image-$Architecture"
 
         Write-Status "Building $TargetFramework base image: $Tag"
         docker build -f (Join-Path $PWD -ChildPath '.\LambdaRuntimeDockerfiles\Images\' | Join-Path -ChildPath $TargetFramework | Join-Path -ChildPath  $Architecture | Join-Path -ChildPath 'Dockerfile') -t $Tag .

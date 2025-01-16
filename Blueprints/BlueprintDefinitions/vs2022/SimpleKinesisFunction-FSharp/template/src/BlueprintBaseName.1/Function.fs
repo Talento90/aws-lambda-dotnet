@@ -17,24 +17,24 @@ type Function() =
     /// <summary>
     /// A function to process Kinesis events
     /// </summary>
-    /// <param name="kinesisEvent"></param>
-    /// <param name="context"></param>
+    /// <param name="kinesisEvent">The event for the Lambda function handler to process.</param>
+    /// <param name="context">The ILambdaContext that provides methods for logging and describing the Lambda environment.</param>
     /// <returns></returns>
     member __.FunctionHandler (kinesisEvent: KinesisEvent) (context: ILambdaContext) =
         sprintf "Beginning to process % i records..." kinesisEvent.Records.Count
-        |> context.Logger.LogLine
+        |> context.Logger.LogInformation
 
         let getRecordContent (data: MemoryStream) =
             use reader = new StreamReader(data, Encoding.ASCII)
             reader.ReadToEnd()
 
         let printRecord (record: KinesisEvent.KinesisEventRecord) =
-            context.Logger.LogLine(sprintf "Event ID: %s" record.EventId)
-            context.Logger.LogLine(sprintf "Event Name: %s" record.EventName)
-            context.Logger.LogLine("Record Data:")
-            context.Logger.LogLine(getRecordContent record.Kinesis.Data)
+            context.Logger.LogInformation(sprintf "Event ID: %s" record.EventId)
+            context.Logger.LogInformation(sprintf "Event Name: %s" record.EventName)
+            context.Logger.LogInformation("Record Data:")
+            context.Logger.LogInformation(getRecordContent record.Kinesis.Data)
 
         kinesisEvent.Records
         |> Seq.iter printRecord
 
-        context.Logger.LogLine("Stream processing complete.")
+        context.Logger.LogInformation("Stream processing complete.")

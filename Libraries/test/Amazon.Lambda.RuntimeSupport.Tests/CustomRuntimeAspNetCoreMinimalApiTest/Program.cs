@@ -1,3 +1,5 @@
+using Amazon.Lambda.Serialization.SystemTextJson;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

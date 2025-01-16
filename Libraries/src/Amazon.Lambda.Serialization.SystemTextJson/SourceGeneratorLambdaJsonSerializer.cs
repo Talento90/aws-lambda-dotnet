@@ -1,11 +1,12 @@
 ﻿#if NET6_0_OR_GREATER
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Amazon.Lambda.Core;
-
+using Amazon.Lambda.Serialization.SystemTextJson.Converters;
 
 namespace Amazon.Lambda.Serialization.SystemTextJson
 {
@@ -21,21 +22,37 @@ namespace Amazon.Lambda.Serialization.SystemTextJson
     /// 
     /// Register the serializer with the LambdaSerializer attribute specifying the defined JsonSerializerContext
     /// 
-    /// [assembly: LambdaSerializer(typeof(SourceGeneratorLambdaJsonSerializer&ly;APIGatewayExampleImage.MyJsonContext&gt;))]
+    /// [assembly: LambdaSerializer(typeof(SourceGeneratorLambdaJsonSerializer&lt;APIGatewayExampleImage.MyJsonContext&gt;))]
     /// 
     /// When the class is compiled it will generate all of the JSON serialization code to convert between JSON and the list types. This
     /// will avoid any reflection based serialization.
     /// </summary>
     /// <typeparam name="TSGContext"></typeparam>
-    public class SourceGeneratorLambdaJsonSerializer<TSGContext> : AbstractLambdaJsonSerializer, ILambdaSerializer where TSGContext : JsonSerializerContext
+    public class SourceGeneratorLambdaJsonSerializer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TSGContext> : AbstractLambdaJsonSerializer, ILambdaSerializer where TSGContext : JsonSerializerContext
     {
         TSGContext _jsonSerializerContext;
+
+        /// <summary>
+        /// The options used to serialize JSON object.
+        /// </summary>
+        protected JsonSerializerOptions SerializerOptions { get; }
 
         /// <summary>
         /// Constructs instance of serializer.
         /// </summary>
         public SourceGeneratorLambdaJsonSerializer()
-            : this(null)
+            : this(null, null)
+        {
+
+        }
+
+        /// <summary>
+        /// Constructs instance of serializer with the option to customize the JsonSerializerOptions after the 
+        /// Amazon.Lambda.Serialization.SystemTextJson's default settings have been applied.
+        /// </summary>
+        /// <param name="customizer"></param>
+        public SourceGeneratorLambdaJsonSerializer(Action<JsonSerializerOptions> customizer)
+            : this(customizer, null)
         {
 
         }
@@ -46,10 +63,48 @@ namespace Amazon.Lambda.Serialization.SystemTextJson
         /// </summary>
         /// <param name="jsonWriterCustomizer"></param>
         public SourceGeneratorLambdaJsonSerializer(Action<JsonWriterOptions> jsonWriterCustomizer)
+            : this(null, jsonWriterCustomizer)
+        {
+        }
+
+        /// <summary>
+        /// Constructs instance of serializer with the option to customize the JsonWriterOptions after the 
+        /// Amazon.Lambda.Serialization.SystemTextJson's default settings have been applied.
+        /// </summary>
+        /// <param name="customizer"></param>
+        /// <param name="jsonWriterCustomizer"></param>
+        public SourceGeneratorLambdaJsonSerializer(Action<JsonSerializerOptions> customizer, Action<JsonWriterOptions> jsonWriterCustomizer)
             : base(jsonWriterCustomizer)
         {
-           var defaultProperty = typeof(TSGContext).GetProperty("Default");
-            _jsonSerializerContext = defaultProperty.GetGetMethod().Invoke(null, null) as TSGContext;
+            SerializerOptions = CreateDefaultJsonSerializationOptions();
+            customizer?.Invoke(this.SerializerOptions);
+
+            var constructor = typeof(TSGContext).GetConstructor(new Type[] { typeof(JsonSerializerOptions) });
+            if(constructor == null)
+            {
+                throw new ApplicationException($"The serializer {typeof(TSGContext).FullName} is missing a constructor that takes in JsonSerializerOptions object");
+            }
+
+            _jsonSerializerContext = constructor.Invoke(new object[] { this.SerializerOptions }) as TSGContext;
+        }
+
+        /// <summary>
+        /// Constructs instance of serializer with the option to customize the JsonWriterOptions after the 
+        /// Amazon.Lambda.Serialization.SystemTextJson's default settings have been applied.
+        /// </summary>
+        /// <param name="jsonSerializerContext"></param>
+        /// <param name="customizer"></param>
+        /// <param name="jsonWriterCustomizer"></param>
+        [Obsolete("The method is marked obsolete because the jsonSerializerContext parameter is unlikely to be created with the required JsonSerializerOptions for Lambda serialization. " + 
+            "This will trigger confusing NullReferenceException. The constructors that don't take an instance of jsonSerializerContext can be used for Native AOT because the reflection " + 
+            "calls have been annotated to make them Native AOT compatible.")]
+        public SourceGeneratorLambdaJsonSerializer(TSGContext jsonSerializerContext, Action<JsonSerializerOptions> customizer = null, Action<JsonWriterOptions> jsonWriterCustomizer = null)
+            : base(jsonWriterCustomizer)
+        {
+            SerializerOptions = CreateDefaultJsonSerializationOptions();
+            customizer?.Invoke(this.SerializerOptions);
+
+            _jsonSerializerContext = jsonSerializerContext;
         }
 
 

@@ -6,7 +6,7 @@
     "Lambda",
     "Serverless"
   ],
-  "name": "Lambda ASP.NET Core Web API (.NET 6 Container Image)",
+  "name": "Lambda ASP.NET Core Web API (.NET 8 Container Image)",
   "identity": "AWS.Lambda.Serverless.Image.AspNetCoreWebAPI.FSharp",
   "groupIdentity": "AWS.Lambda.Serverless.Image.AspNetCoreWebAPI",
   "shortName": "serverless.image.AspNetCoreWebAPI",
@@ -30,15 +30,6 @@
       "datatype": "string",
       "replaces": "DefaultRegion",
       "defaultValue": ""
-    },
-    "safe-sourcename": {
-      "type": "generated",
-      "generator": "coalesce",
-      "parameters": {
-        "sourceVariableName": "safe_namespace",
-        "fallbackVariableName": "safe_name"
-      },
-      "replaces": "BlueprintBaseName._1"
     }
   },
   "primaryOutputs": [

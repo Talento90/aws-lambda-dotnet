@@ -1,4 +1,6 @@
 @page "/documentation"
+@using Microsoft.AspNetCore.Http;
+@inject IHttpContextAccessor httpContextAccessor;
 
 <h1 style="padding: 15px">@Constants.PRODUCT_NAME</h1>
 <hr />
@@ -16,6 +18,44 @@
     The easiest way to use this tool is with Visual Studio and the <a href="@Constants.LINK_VS_TOOLKIT_MARKETPLACE" target="_blank">AWS Toolkit for Visual Studio</a>
     which will automatically configure this tool when a .NET Core Lambda project is opened in Visual Studio. For how to setup this tool for other IDE like Visual Studio for Code or Rider from JetBrains check
     click <a href="@Constants.LINK_GITHUB_TEST_TOOL_INSTALL_AND_RUN" target="_blank">here.</a>
+</p>
+
+<h2>Test Executable Assembly Functions</h2>
+<p>
+    .NET Lambda functions can be written as an executable assembly. This is done for Lambda functions using custom runtime or using .NET top level statements. These functions include the 
+    Lambda runtime client implemented in the Amazon.Lambda.RuntimeSupport NuGet package. In an executable assembly function the Lambda runtime client is initialized and connects to a 
+    local REST endpoint for Lambda events to process.
+</p>
+<p>
+    The <b>Executable Assembly</b> page in this tool hosts a local Lambda runtime API for the Lambda runtime client to connect to. On this page you can queue events for the Lambda 
+    function to process.
+</p>
+<h4>Connect Executable Assembly Functions</h4>
+<p>
+    To test Lambda function built as an executable assembly the environment variable <b>AWS_LAMBDA_RUNTIME_API</b> must be set to 
+    <b>@httpContextAccessor.HttpContext.Request.Host</b>. This will tell Amazon.Lambda.RuntimeSupport to connect to this instance of the test tool for Lambda
+    events to process. To configure AWS credentials and region for the function the environment variables <b>AWS_PROFILE</b> and <b>AWS_REGION</b> can be set. 
+</p>
+<p>
+    Here is an example of a .NET executable assembly Lambda function's <i>launchSettings.json</i> file used in Visual Studio for debugging that connects to the test tool and 
+    sets the profile and region.
+    <pre>
+{
+  "profiles": {
+    "Lambda Runtime API": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "AWS_LAMBDA_RUNTIME_API": "@httpContextAccessor.HttpContext.Request.Host",
+        "AWS_PROFILE": "test-profile",
+        "AWS_REGION": "us-west-2"
+      }
+    }
+  }
+}
+    </pre>
+<h4>Programmatically Queue Events</h4>
+To queue an event to be processed without using the UI send a <b>POST</b> request to <b>http://@httpContextAccessor.HttpContext.Request.Host/runtime/test-event</b> with the 
+JSON Lambda event document as the POST request's body.
 </p>
 
 <h2>Frequently Asked Questions</h2>
@@ -44,8 +84,8 @@
 </p>
 
 <pre style="white-space: pre-wrap; background-color:lightgray;font-size:85%">
-&gt; dotnet lambda-test-tool-3.1 --help
-AWS .NET Core 3.1 Mock Lambda Test Tool (0.10.0)
+&gt; dotnet lambda-test-tool-6.0 --help
+AWS .NET Core 6.0 Mock Lambda Test Tool (@Amazon.Lambda.TestTool.Utils.DetermineToolVersion())
 
 The .NET Lambda Test Tool can be launched in 2 modes. The default mode is to launch a web interface to select the Lambda code
 to execute with in the Lambda test tool. The second mode skips using the web interface and the Lambda code is identified
@@ -57,6 +97,9 @@ These options are valid for either mode the Lambda test tool is running in.
 
 These options are valid when using the web interface to select and execute the Lambda code.
 
+        --host &lt;hostname-or-ip-address&gt;       The hostname or IP address used for the test tool's web interface.
+                                              Any host other than an explicit IP address or localhost (e.g. '*', '+' or 'example.com') 
+                                              binds to all public IPv4 and IPv6 addresses. 
         --port &lt;port-number&gt;                  The port number used for the test tool's web interface.
         --no-launch-window                    Disable auto launching the test tool's web interface in a browser.
 
@@ -78,6 +121,12 @@ These options are valid in the no web interface mode.
                                               executing the Lambda code. The default value is true.
 </pre>
 
+<p>
+    <i>Note</i>: The <b>--host</b> argument do not bind to specific hostname as it's value is largely ignored by 
+    <a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/endpoints?view=aspnetcore-6.0#url-prefixes-1" target="_blank">web hosting</a>. 
+    This is mostly used to expose web interface through docker by binding to all public IP addresses.
+</p>
+
 <p class="faq-answer">
     For command line arguments not set the defaults and config file will be used to determine the .NET Lambda code to run. For example if you just use the <b>--no-ui</b> argument then the
     <b>aws-lambda-tools-defaults.json</b> will be searched for and used if found. The tool when then use the function handler, profile and region specified in the configuration file to run
@@ -95,8 +144,8 @@ These options are valid in the no web interface mode.
     "Mock Lambda Test Tool": {
       "commandName": "Executable",
       "commandLineArgs": "--no-ui --payload payload.json",
-      "workingDirectory": ".\\bin\\$(Configuration)\\netcoreapp3.1",
-      "executablePath": "C:\\Users\\%USERNAME%\\.dotnet\\tools\\dotnet-lambda-test-tool-3.1.exe"
+      "workingDirectory": ".\\bin\\$(Configuration)\\net6.0",
+      "executablePath": "C:\\Users\\%USERNAME%\\.dotnet\\tools\\dotnet-lambda-test-tool-6.0.exe"
     }
   }
 }

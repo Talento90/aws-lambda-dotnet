@@ -16,34 +16,38 @@
 using System;
 using System.Collections.Generic;
 
-namespace Infrastructure
+namespace Infrastructure;
+
+internal class Configuration
 {
-    internal class Configuration
-    {
-        public Source Source { get; } = new Source();
-        public Ecrs Ecrs { get; } = new Ecrs();
-        public readonly string[] EcrRepositoryNames = Environment.GetEnvironmentVariable("AWS_LAMBDA_ECR_REPOSITORY_NAME")?.Split(";");
-        public const string ProjectRoot = "LambdaRuntimeDockerfiles/Infrastructure/src/Infrastructure";
-        public const string ProjectName = "aws-lambda-container-images";
-        public readonly string[] DockerARM64Images = new string[] { "net6" };
-        public readonly Dictionary<string, string> DockerBuildImages = new Dictionary<string, string> { {"net5", "5.0-buster-slim"}, {"net6", "6.0-bullseye-slim"} };
-        public readonly Dictionary<string, string> BaseImageAMD64Tags = new Dictionary<string, string> { { "net5", "base-image-x86_64" }, { "net6", "base-image-x86_64" } };
-        public readonly Dictionary<string, string> BaseImageARM64Tags = new Dictionary<string, string> { { "net5", "base-image-arm64" }, { "net6", "base-image-arm64" } };
-        public readonly string[] Frameworks = Environment.GetEnvironmentVariable("AWS_LAMBDA_DOTNET_FRAMEWORK_VERSION")?.Split(";");
-        public readonly string[] Channels = Environment.GetEnvironmentVariable("AWS_LAMBDA_DOTNET_FRAMEWORK_CHANNEL")?.Split(";");
-    }
+    public string AccountId { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_PIPELINE_ACCOUNT_ID");
+    public string Region { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_PIPELINE_REGION");
 
-    internal class Source
-    {
-        public string RepositoryArn { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_SOURCE_REPOSITORY_ARN");
-        public string BranchName { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_SOURCE_BRANCH_NAME");
-        public string CrossAccountRoleArn { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_SOURCE_CROSS_ACCOUNT_ROLE_ARN");
-    }
+    public string GitHubTokenSecretName { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_GITHUB_TOKEN_SECRET_NAME");
 
-    internal class Ecrs
-    {
-        public string Stage { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_STAGE_ECR");
-        public string Beta { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_BETA_ECRS");
-        public string Prod { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_PROD_ECRS");
-    }
+    public string GitHubTokenSecretKey { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_GITHUB_TOKEN_SECRET_KEY");
+    public string GitHubOwner { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_GITHUB_REPO_OWNER");
+    public string GitHubRepository { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_GITHUB_REPO_NAME");
+    public string GitHubBranch { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_GITHUB_REPO_BRANCH");
+    public Ecrs Ecrs { get; } = new Ecrs();
+    public readonly string[] EcrRepositoryNames = Environment.GetEnvironmentVariable("AWS_LAMBDA_ECR_REPOSITORY_NAME")?.Split(";");
+    public const string ProjectRoot = "LambdaRuntimeDockerfiles/Infrastructure/src/Infrastructure";
+    public static readonly string ProjectName = $"aws-lambda-container-images{Environment.GetEnvironmentVariable("AWS_LAMBDA_PIPELINE_NAME_SUFFIX")}";
+    public readonly string[] DockerArm64Images = new string[] { "net6", "net8", "net9" };
+    // DotnetSdkVersions is used to specify a specific version of the .NET SDK to be installed on the CodeBuild image
+    // The default behavior is to specify a channel and that installs the latest version in that channel
+    // By specifying a specific .NET SDK version, you override the default channel behavior
+    public readonly Dictionary<string, string> DotnetSdkVersions = new Dictionary<string, string> { };
+    public readonly Dictionary<string, string> DockerBuildImages = new Dictionary<string, string> { {"net6", "6.0-bullseye-slim"}, {"net8", "8.0-bookworm-slim"}, {"net9", "9.0-bookworm-slim"} };
+    public readonly Dictionary<string, string> BaseImageAmd64Tags = new Dictionary<string, string> { { "net6", "contributed-base-image-x86_64" }, { "net8", "contributed-base-image-x86_64" }, { "net9", "contributed-base-image-x86_64" } };
+    public readonly Dictionary<string, string> BaseImageArm64Tags = new Dictionary<string, string> { { "net6", "contributed-base-image-arm64" }, { "net8", "contributed-base-image-arm64" }, { "net9", "contributed-base-image-arm64" } };
+    public readonly string[] Frameworks = Environment.GetEnvironmentVariable("AWS_LAMBDA_DOTNET_FRAMEWORK_VERSION")?.Split(";");
+    public readonly string[] Channels = Environment.GetEnvironmentVariable("AWS_LAMBDA_DOTNET_FRAMEWORK_CHANNEL")?.Split(";");
+}
+
+internal class Ecrs
+{
+    public string Stage { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_STAGE_ECR");
+    public string Beta { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_BETA_ECRS");
+    public string Prod { get; } = Environment.GetEnvironmentVariable("AWS_LAMBDA_PROD_ECRS");
 }

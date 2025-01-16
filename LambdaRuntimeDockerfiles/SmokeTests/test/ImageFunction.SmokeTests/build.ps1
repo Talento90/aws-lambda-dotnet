@@ -74,6 +74,7 @@ $env:AWS_LAMBDA_IMAGE_URI = $DestinationUri
 try {
     Write-Host "Running Smoke Tests"
     Push-Location $PSScriptRoot
+    
     dotnet test .\ImageFunction.SmokeTests.csproj -v n /p:Framework=$TargetFramework
 
     if (!$?)

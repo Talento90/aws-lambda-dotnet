@@ -44,6 +44,14 @@
     <filename>aws-proxy.json</filename>
   </request>
   <request category="AWS">
+    <name>API Gateway V2 HTTP API</name>
+    <filename>http-api-v2-request.json</filename>
+  </request>
+  <request category="AWS">
+    <name>Application Load Balancer</name>
+    <filename>alb.json</filename>
+  </request>
+  <request category="AWS">
     <name>AWS Batch Get Job Request</name>
     <filename>batch-get-job.json</filename>
   </request>
@@ -194,6 +202,10 @@
   <request category="AWS">
     <name>SQS</name>
     <filename>sqs.json</filename>
+  </request>
+  <request category="AWS">
+    <name>Kafka Event</name>
+    <filename>kafka-event.json</filename>
   </request>
   <request category="Common">
     <name>Hello World</name>

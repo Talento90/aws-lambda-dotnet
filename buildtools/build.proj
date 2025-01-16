@@ -9,7 +9,7 @@
         <PackCommand>dotnet pack --no-build -c $(Configuration) -o $(MSBuildThisFileDirectory)/../Deployment/nuget-packages</PackCommand>
 		<PackWithConfigurationCommand>dotnet pack --no-build -o $(MSBuildThisFileDirectory)/../Deployment/nuget-packages</PackWithConfigurationCommand>
         <SignAssembly Condition=" '$(SignAssembly)' == '' ">true</SignAssembly>
-        <AssemblyOriginatorKeyFile Condition=" '$(AssemblyOriginatorKeyFile)' == '' ">$(MSBuildThisFileDirectory)local-development.snk</AssemblyOriginatorKeyFile>
+        <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)/public.snk</AssemblyOriginatorKeyFile>
         <BlueprintPackagerArguments Condition="'$(UpdateBlueprintPackageVersions)'=='true'">--updateVersions</BlueprintPackagerArguments>
         <Cicd Condition="'$(Cicd)' == ''">false</Cicd>
     </PropertyGroup>
@@ -38,9 +38,8 @@
         <Exec Command="dotnet restore BlueprintPackager.sln" WorkingDirectory="..\Blueprints\BlueprintPackager"/>
     </Target>
     <Target Name="package-blueprints" DependsOnTargets="init;run-blueprint-packager">
-        <Exec Command="$(MSBuildThisFileDirectory)nuget.exe pack template.nuspec -OutputDirectory ../../../Deployment/nuget-packages" WorkingDirectory="../Blueprints/BlueprintDefinitions/vs2022"/>
-		
-		<Exec Command="$(MSBuildThisFileDirectory)nuget.exe pack template.nuspec -OutputDirectory ../../../Deployment/nuget-packages" WorkingDirectory="../Blueprints/BlueprintDefinitions/vs2019"/>
+        <Exec Command="dotnet pack Templates.csproj --output ../../../Deployment/nuget-packages" WorkingDirectory="../Blueprints/BlueprintDefinitions/vs2022"/>
+		<Exec Command="dotnet pack Templates.csproj --output ../../../Deployment/nuget-packages" WorkingDirectory="../Blueprints/BlueprintDefinitions/vs2019"/>
     </Target>
     <Target Name="run-blueprint-packager">
         <Exec Command="dotnet run -c $(Configuration) $(BlueprintPackagerArguments)" WorkingDirectory="..\Blueprints\BlueprintPackager"/>
@@ -65,8 +64,8 @@
 		<MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.image.AspNetCoreWebAPI;ProjectName=ImageAspNetCoreWebApiF;Lang=F#;Version=vs2022"/>		
 		<MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.image.EmptyServerless;ProjectName=ImageEmptyServerlessC;Lang=C#;Version=vs2022"/>
 		<MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.image.EmptyServerless;ProjectName=ImageEmptyServerlessF;Lang=F#;Version=vs2022"/>
-
-		
+		<MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.Annotations;ProjectName=AnnotationsC;Lang=C#;Version=vs2022"/>
+        <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.Messaging;ProjectName=MessagingC;Lang=C#;Version=vs2022"/>
 		<MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.AspNetCoreWebApp;ProjectName=AspNetCoreWebAppC;Lang=C#;Version=vs2022"/>
 		<MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.WebSocketAPI;ProjectName=WebSocketAPIC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=lambda.SimpleApplicationLoadBalancerFunction;ProjectName=SimpleApplicationLoadBalancerFunctionC;Lang=C#;Version=vs2022"/>
@@ -91,7 +90,6 @@
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=lambda.SQS;ProjectName=SQSFunctionC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.AspNetCoreWebAPI;ProjectName=AspNetCoreWebAPIC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.AspNetCoreWebAPI;ProjectName=AspNetCoreWebAPIF;Lang=F#;Version=vs2022"/>
-        <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.DynamoDBBlogAPI;ProjectName=DynamoDBBlogAPIC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.EmptyServerless;ProjectName=EmptyServerlessC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.EmptyServerless;ProjectName=EmptyServerlessF;Lang=F#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.Giraffe;ProjectName=GiraffeF;Lang=F#;Version=vs2022"/>
@@ -99,7 +97,7 @@
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=lambda.OrderFlowersChatbot;ProjectName=OrderFlowersChatbotC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.StepFunctionsHelloWorld;ProjectName=StepFunctionsHelloWorldC;Lang=C#;Version=vs2022"/>
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="run-blueprint-dotnetnew" Properties="TemplateName=serverless.StepFunctionsHelloWorld;ProjectName=StepFunctionsHelloWorldF;Lang=F#;Version=vs2022"/>				
-		
+
 		<Exec Command="dotnet new -u Blueprints\BlueprintDefinitions\vs2019" WorkingDirectory="..\" IgnoreExitCode="true" />
         <Exec Command="dotnet new -i Blueprints\BlueprintDefinitions\vs2019" WorkingDirectory="..\"/>
 		
@@ -168,10 +166,10 @@
         <Exec Command="$(PackCommand)" WorkingDirectory="..\Libraries\src\%(LibraryName.FileName)"/>
     </Target>
     <Target Name="build-lambda-test-tool-package" DependsOnTargets="init">
-        <Exec Command="dotnet msbuild aws-lambda-test-tool-netcore.sln /t:Rebuild /p:Configuration=$(Configuration) /p:AssemblyOriginatorKeyFile=$(AssemblyOriginatorKeyFile) /p:SignAssembly=$(SignAssembly)" WorkingDirectory="..\Tools\LambdaTestTool"/>
-        <Exec Command="$(PackCommand) Amazon.Lambda.TestTool.BlazorTester31-pack.csproj" WorkingDirectory="..\Tools\LambdaTestTool\src\Amazon.Lambda.TestTool.BlazorTester"/>
-		<Exec Command="$(PackCommand) Amazon.Lambda.TestTool.BlazorTester50-pack.csproj" WorkingDirectory="..\Tools\LambdaTestTool\src\Amazon.Lambda.TestTool.BlazorTester"/>		
+        <Exec Command="dotnet msbuild aws-lambda-test-tool-netcore.sln /t:Rebuild /p:Configuration=$(Configuration) /p:AssemblyOriginatorKeyFile=$(AssemblyOriginatorKeyFile) /p:SignAssembly=$(SignAssembly)" WorkingDirectory="..\Tools\LambdaTestTool"/>	
 		<Exec Command="$(PackCommand) Amazon.Lambda.TestTool.BlazorTester60-pack.csproj" WorkingDirectory="..\Tools\LambdaTestTool\src\Amazon.Lambda.TestTool.BlazorTester"/>		
+		<Exec Command="$(PackCommand) Amazon.Lambda.TestTool.BlazorTester70-pack.csproj" WorkingDirectory="..\Tools\LambdaTestTool\src\Amazon.Lambda.TestTool.BlazorTester"/>
+		<Exec Command="$(PackCommand) Amazon.Lambda.TestTool.BlazorTester80-pack.csproj" WorkingDirectory="..\Tools\LambdaTestTool\src\Amazon.Lambda.TestTool.BlazorTester"/>		
     </Target>
     <Target Name="build-lambda-test-tool-package-cicd" DependsOnTargets="init">
         <Exec Command="dotnet msbuild -restore /p:Configuration=$(Configuration) /p:AssemblyOriginatorKeyFile=$(AssemblyOriginatorKeyFile) /p:SignAssembly=$(SignAssembly)" WorkingDirectory="..\Tools\LambdaTestTool"/>
@@ -180,26 +178,29 @@
         <PropertyGroup>
             <Command>dotnet test</Command>
         </PropertyGroup>
-		<Exec Command="$(Command)" WorkingDirectory="..\Tools\LambdaTestTool\tests\Amazon.Lambda.TestTool.Tests.NETCore31"/>
+		<Exec Command="$(Command)" WorkingDirectory="..\Tools\LambdaTestTool\tests\Amazon.Lambda.TestTool.Tests"/>
     </Target>
         <Target Name="test-lambda-test-tool-cicd" DependsOnTargets="build-lambda-test-tool-package-cicd">
         <PropertyGroup>
             <Command>dotnet test</Command>
         </PropertyGroup>
-		<Exec Command="$(Command)" WorkingDirectory="..\Tools\LambdaTestTool\tests\Amazon.Lambda.TestTool.Tests.NETCore31"/>
+		<Exec Command="$(Command)" WorkingDirectory="..\Tools\LambdaTestTool\tests\Amazon.Lambda.TestTool.Tests"/>
     </Target>
     <Target Name="install-lambda-test-tool" DependsOnTargets="build-lambda-test-tool-package">
-        <Exec Command="dotnet tool uninstall -g Amazon.Lambda.TestTool-3.1" IgnoreExitCode="true"/>
-        <Exec Command="dotnet tool install --add-source . -g Amazon.Lambda.TestTool-3.1" WorkingDirectory="../Deployment"/>
+        <Exec Command="dotnet tool uninstall -g Amazon.Lambda.TestTool-8.0" IgnoreExitCode="true"/>
+        <Exec Command="dotnet tool install --add-source . -g Amazon.Lambda.TestTool-8.0" WorkingDirectory="../Deployment"/>
 	</Target>
     <Target Name="build-project-packages">
         <Exec Command="dotnet msbuild -restore /p:Configuration=$(Configuration) /p:AssemblyOriginatorKeyFile=$(AssemblyOriginatorKeyFile) /p:SignAssembly=$(SignAssembly)" WorkingDirectory="..\Libraries\src\%(LibraryName.FileName)"/>
     </Target>
     <Target Name="run-unit-tests">
+        <Exec Command="dotnet test -c $(Configuration)" WorkingDirectory="..\Libraries\test\SnapshotRestore.Registry.Tests"/>
         <Exec Command="dotnet test -c $(Configuration)" WorkingDirectory="..\Libraries\test\Amazon.Lambda.RuntimeSupport.Tests\Amazon.Lambda.RuntimeSupport.UnitTests"/>
+        <Exec Command="dotnet test -c $(Configuration)" WorkingDirectory="..\Libraries\test\Amazon.Lambda.Annotations.SourceGenerators.Tests"/>
     </Target>
     <Target Name="run-integ-tests">
-        <Exec Command="dotnet test -c $(Configuration)" WorkingDirectory="..\Libraries\test\Amazon.Lambda.RuntimeSupport.Tests\Amazon.Lambda.RuntimeSupport.IntegrationTests"/>
+        <Exec Command="dotnet test -c $(Configuration) --logger &quot;console;verbosity=detailed&quot;" WorkingDirectory="..\Libraries\test\Amazon.Lambda.RuntimeSupport.Tests\Amazon.Lambda.RuntimeSupport.IntegrationTests"/>
+        <Exec Command="dotnet test -c $(Configuration) --logger &quot;console;verbosity=detailed&quot;" WorkingDirectory="..\Libraries\test\TestServerlessApp.IntegrationTests"/>
     </Target>
     <Target Name="create-nuget-packages-cicd" DependsOnTargets="build-project-packages">
         <Exec Command="$(PackCommand)" WorkingDirectory="..\Libraries\src\%(LibraryName.FileName)"/>

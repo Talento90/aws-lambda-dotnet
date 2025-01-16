@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
@@ -25,9 +26,15 @@ namespace Amazon.Lambda.AspNetCoreServer.Internal
                              IHttpResponseFeature,
                              IHttpConnectionFeature,
                              IServiceProvidersFeature,
-                             ITlsConnectionFeature
+                             ITlsConnectionFeature,
+                             IHttpRequestIdentifierFeature,
 
-                             ,IHttpResponseBodyFeature
+                             IHttpResponseBodyFeature
+
+#if NET6_0_OR_GREATER
+                            ,IHttpRequestBodyDetectionFeature
+                            ,IHttpActivityFeature
+#endif
     /*
     ,
                          IHttpUpgradeFeature,
@@ -46,6 +53,12 @@ namespace Amazon.Lambda.AspNetCoreServer.Internal
             this[typeof(IServiceProvidersFeature)] = this;
             this[typeof(ITlsConnectionFeature)] = this;
             this[typeof(IHttpResponseBodyFeature)] = this;
+            this[typeof(IHttpRequestIdentifierFeature)] = this;
+
+#if NET6_0_OR_GREATER
+            this[typeof(IHttpRequestBodyDetectionFeature)] = this;
+            this[typeof(IHttpActivityFeature)] = this;
+#endif
         }
 
         #region IFeatureCollection
@@ -345,5 +358,45 @@ namespace Amazon.Lambda.AspNetCoreServer.Internal
         public X509Certificate2 ClientCertificate { get; set; }
 
         #endregion
+
+        #region IHttpRequestIdentifierFeature
+
+        string _traceIdentifier;
+        string IHttpRequestIdentifierFeature.TraceIdentifier
+        {
+            get 
+            {
+                if(_traceIdentifier != null)
+                {
+                    return _traceIdentifier;
+                }
+
+                var lambdaTraceId = Environment.GetEnvironmentVariable("_X_AMZN_TRACE_ID");
+                if (!string.IsNullOrEmpty(lambdaTraceId))
+                {
+                    return lambdaTraceId;
+                }
+
+                // If there is no Lambda trace id then fallback to the trace id that ASP.NET Core would have generated.
+                _traceIdentifier = (new Microsoft.AspNetCore.Http.Features.HttpRequestIdentifierFeature()).TraceIdentifier;
+                return _traceIdentifier;
+            }
+            set { this._traceIdentifier = value; }
+        }
+
+        #endregion
+
+#if NET6_0_OR_GREATER
+        bool IHttpRequestBodyDetectionFeature.CanHaveBody
+        {
+            get
+            {
+                var requestFeature = (IHttpRequestFeature)this;
+                return requestFeature.Body != null && requestFeature.Body.Length > 0;
+            }
+        }
+
+        Activity IHttpActivityFeature.Activity { get; set; }
+#endif
     }
 }

@@ -6,14 +6,15 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 using Amazon.Lambda.APIGatewayEvents;
+using Amazon.Lambda.AspNetCoreServer.Internal;
 using Amazon.Lambda.TestUtilities;
-
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
+using Microsoft.AspNetCore.Http.Features;
 using TestWebApp;
 
 using Xunit;
@@ -103,7 +104,10 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
         public async Task TestGetEncodingQueryStringGateway()
         {
             var response = await this.InvokeAPIGatewayRequest("values-get-querystring-apigateway-encoding-request.json");
-            var results = JsonConvert.DeserializeObject<TestWebApp.Controllers.RawQueryStringController.Results>(response.Body);
+            var results = JsonSerializer.Deserialize<TestWebApp.Controllers.RawQueryStringController.Results>(response.Body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
             Assert.Equal("http://www.gooogle.com", results.Url);
             Assert.Equal(DateTimeOffset.Parse("2019-03-12T16:06:06.549817+00:00"), results.TestDateTimeOffset);
 
@@ -123,6 +127,15 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
         }
 
         [Fact]
+        public async Task TestPutNoBody()
+        {
+            var response = await this.InvokeAPIGatewayRequest("values-put-no-body-request.json");
+
+            Assert.Equal(string.Empty, response.Body);
+            Assert.Equal(202, response.StatusCode);
+        }
+
+        [Fact]
         public async Task TestDefaultResponseErrorCode()
         {
             var response = await this.InvokeAPIGatewayRequest("values-get-error-apigateway-request.json");
@@ -132,16 +145,25 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
         }
 
         [Theory]
-        [InlineData("values-get-aggregateerror-apigateway-request.json", "AggregateException")]
-        [InlineData("values-get-typeloaderror-apigateway-request.json", "ReflectionTypeLoadException")]
-        public async Task TestEnhancedExceptions(string requestFileName, string expectedExceptionType)
+        [InlineData("values-get-aggregateerror-apigateway-request.json", "AggregateException", true)]
+        [InlineData("values-get-typeloaderror-apigateway-request.json", "ReflectionTypeLoadException", true)]
+        [InlineData("values-get-aggregateerror-apigateway-request.json", "AggregateException", false)]
+        [InlineData("values-get-typeloaderror-apigateway-request.json", "ReflectionTypeLoadException", false)]
+        public async Task TestEnhancedExceptions(string requestFileName, string expectedExceptionType, bool configureApiToReturnExceptionDetail)
         {
-            var response = await this.InvokeAPIGatewayRequest(requestFileName);
+            var response = await this.InvokeAPIGatewayRequest(requestFileName, configureApiToReturnExceptionDetail);
 
             Assert.Equal(500, response.StatusCode);
             Assert.Equal(string.Empty, response.Body);
+            if (configureApiToReturnExceptionDetail)
+            {
             Assert.True(response.MultiValueHeaders.ContainsKey("ErrorType"));
             Assert.Equal(expectedExceptionType, response.MultiValueHeaders["ErrorType"][0]);
+        }
+            else
+            {
+                Assert.False(response.MultiValueHeaders.ContainsKey("ErrorType"));
+            }
         }
 
         [Fact]
@@ -158,11 +180,16 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
         public void TestGetCustomAuthorizerValue()
         {
             var requestStr = File.ReadAllText("values-get-customauthorizer-apigateway-request.json");
-            var request = JsonConvert.DeserializeObject<APIGatewayProxyRequest>(requestStr);
-            Assert.NotNull(request.RequestContext.Authorizer);
+            var request = JsonSerializer.Deserialize<APIGatewayProxyRequest>(requestStr, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            Assert.NotNull(request?.RequestContext.Authorizer);
             Assert.NotNull(request.RequestContext.Authorizer.StringKey);
             Assert.Equal(9, request.RequestContext.Authorizer.NumKey);
             Assert.True(request.RequestContext.Authorizer.BoolKey);
+            Assert.NotEmpty(request.RequestContext.Authorizer.Claims);
+            Assert.Equal("test-id", request.RequestContext.Authorizer.Claims["sub"]);
         }
 
         [Fact]
@@ -192,9 +219,12 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
                 }
             };
 
-            var json = JsonConvert.SerializeObject(response);
+            var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
             Assert.NotNull(json);
-            var expected = "{\"principalId\":\"com.amazon.someuser\",\"policyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"execute-api:Invoke\"],\"Resource\":[\"arn:aws:execute-api:us-west-2:1234567890:apit123d45/Prod/GET/*\"]}]},\"context\":{\"stringKey\":\"Hey I'm a string\",\"boolKey\":true,\"numKey\":9},\"usageIdentifierKey\":null}";
+            var expected = "{\"principalId\":\"com.amazon.someuser\",\"policyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"execute-api:Invoke\"],\"Resource\":[\"arn:aws:execute-api:us-west-2:1234567890:apit123d45/Prod/GET/*\"],\"Condition\":null}]},\"context\":{\"stringKey\":\"Hey I'm a string\",\"boolKey\":true,\"numKey\":9},\"usageIdentifierKey\":null}";
             Assert.Equal(expected, json);
         }
 
@@ -228,8 +258,8 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
 
             Assert.Equal(200, response.StatusCode);
 
-            var root = JObject.Parse(response.Body);
-            Assert.Equal("/foo+bar", root["Path"]?.ToString());
+            var root = JsonSerializer.Deserialize<IDictionary<string, object>>(response.Body);
+            Assert.Equal("/foo+bar", root?["Path"]?.ToString());
         }
 
         [Fact]
@@ -259,16 +289,36 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
         }
 
         [Fact]
+        public async Task TestAdditionalPathParametersInProxyPath()
+        {
+            var response = await this.InvokeAPIGatewayRequest("additional-path-parameters-in-proxy-path.json");
+            Assert.Equal(200, response.StatusCode);
+
+            var root = JsonSerializer.Deserialize<JsonObject>(response.Body);
+            Assert.Equal("/path/bar/api", root?["Path"]?.ToString());
+        }
+
+        [Fact]
+        public async Task TestAdditionalPathParametersInNonProxyPath()
+        {
+            var response = await this.InvokeAPIGatewayRequest("additional-path-parameters-in-non-proxy-path.json");
+            Assert.Equal(200, response.StatusCode);
+
+            var root = JsonSerializer.Deserialize<JsonObject>(response.Body);
+            Assert.Equal("/path/bar/api", root?["Path"]?.ToString());
+        }
+
+        [Fact]
         public async Task TestSpaceInResourcePathAndQueryString()
         {
             var response = await this.InvokeAPIGatewayRequest("encode-space-in-resource-path-and-query.json");
 
             Assert.Equal(200, response.StatusCode);
 
-            var root = JObject.Parse(response.Body);
-            Assert.Equal("/foo%20bar", root["Path"]?.ToString());
+            var root = JsonSerializer.Deserialize<JsonObject>(response.Body);
+            Assert.Equal("/foo%20bar", root?["Path"]?.ToString());
 
-            var query = root["QueryVariables"]["greeting"] as JArray;
+            var query = root["QueryVariables"]["greeting"] as JsonArray;
             Assert.Equal("hello world", query[0].ToString());
         }
 
@@ -279,9 +329,24 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
 
             Assert.Equal(200, response.StatusCode);
 
-            var root = JObject.Parse(response.Body);
-            Assert.Equal("/Prod", root["PathBase"]?.ToString());
-            Assert.Equal("/foo/", root["Path"]?.ToString());
+            var root = JsonSerializer.Deserialize<JsonObject>(response.Body);
+            Assert.Equal("/Prod", root?["PathBase"]?.ToString());
+            Assert.Equal("/foo/", root?["Path"]?.ToString());
+        }
+
+        [Theory]
+        [InlineData("rawtarget-escaped-percent-in-path.json", "/foo%25bar")]
+        [InlineData("rawtarget-escaped-percent-slash-in-path.json", "/foo%25%2Fbar")]
+        [InlineData("rawtarget-escaped-reserved-in-query.json", "/foo/bar?foo=b%2540r")]
+        [InlineData("rawtarget-escaped-slash-in-path.json", "/foo%2Fbar")]
+        public async Task TestRawTarget(string requestFileName, string expectedRawTarget)
+        {
+            var response = await this.InvokeAPIGatewayRequest(requestFileName);
+
+            Assert.Equal(200, response.StatusCode);
+
+            var root = JsonSerializer.Deserialize<JsonObject>(response.Body);
+            Assert.Equal(expectedRawTarget, root["RawTarget"]?.ToString());
         }
 
         [Fact]
@@ -416,19 +481,35 @@ namespace Amazon.Lambda.AspNetCoreServer.Test
             Assert.Equal("Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope", response.Body);
         }
 
-        private async Task<APIGatewayProxyResponse> InvokeAPIGatewayRequest(string fileName)
+        /// <summary>
+        /// This test is ensuring when we don't use the Lambda trace id and fallback to ASP.NET Core trace id generator
+        /// logic we keep returning the same value each time. This was addressing a PR comment for the trace id PR.
+        /// </summary>
+        [Fact]
+        public void EnsureTraceIdStaysTheSame()
         {
-            return await InvokeAPIGatewayRequest(new TestLambdaContext(), fileName);
+            var features = new InvokeFeatures() as IHttpRequestIdentifierFeature;
+
+            var traceId1 = features.TraceIdentifier;
+            var traceId2 = features.TraceIdentifier;
+            Assert.Equal(traceId1, traceId2);
         }
 
-        private async Task<APIGatewayProxyResponse> InvokeAPIGatewayRequest(TestLambdaContext context, string fileName)
+        private async Task<APIGatewayProxyResponse> InvokeAPIGatewayRequest(string fileName, bool configureApiToReturnExceptionDetail = false)
         {
-            return await InvokeAPIGatewayRequestWithContent(context, GetRequestContent(fileName));
+            return await InvokeAPIGatewayRequest(new TestLambdaContext(), fileName, configureApiToReturnExceptionDetail);
         }
 
-        private async Task<APIGatewayProxyResponse> InvokeAPIGatewayRequestWithContent(TestLambdaContext context, string requestContent)
+        private async Task<APIGatewayProxyResponse> InvokeAPIGatewayRequest(TestLambdaContext context, string fileName, bool configureApiToReturnExceptionDetail = false)
+        {
+            return await InvokeAPIGatewayRequestWithContent(context, GetRequestContent(fileName), configureApiToReturnExceptionDetail);
+        }
+
+        private async Task<APIGatewayProxyResponse> InvokeAPIGatewayRequestWithContent(TestLambdaContext context, string requestContent, bool configureApiToReturnExceptionDetail = false)
         {
             var lambdaFunction = new ApiGatewayLambdaFunction();
+            if (configureApiToReturnExceptionDetail)
+                lambdaFunction.IncludeUnhandledExceptionDetailInResponse = true;
             var requestStream = new MemoryStream(System.Text.UTF8Encoding.UTF8.GetBytes(requestContent));
             var request = new Amazon.Lambda.Serialization.SystemTextJson.LambdaJsonSerializer().Deserialize<APIGatewayProxyRequest>(requestStream);
 

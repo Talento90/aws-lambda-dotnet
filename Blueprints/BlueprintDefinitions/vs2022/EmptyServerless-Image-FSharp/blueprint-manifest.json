@@ -1,8 +1,8 @@
 {
-  "display-name": ".NET 6 (Container Image) Serverless Application",
+  "display-name": ".NET 8 (Container Image) Serverless Application",
   "system-name": "EmptyImageServerless",
-  "description": ".NET 6 Lambda function packaged as a container image and deploy through AWS CloudFormation.",
-  "sort-order": 125,
+  "description": ".NET 8 Lambda function packaged as a container image and deploy through AWS CloudFormation.",
+  "sort-order": 225,
   "hidden-tags": [
     "F#",
     "ServerlessProject"

@@ -23,6 +23,10 @@ namespace Amazon.Lambda.Serialization.SystemTextJson
     /// </para>
     /// </summary>    
     [Obsolete("This serializer is obsolete because it uses inconsistent name casing when serializing to JSON. Lambda functions should use the DefaultLambdaJsonSerializer type.")]
+#if NET8_0_OR_GREATER
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("LambdaJsonSerializer does not support trimming. " +
+            "For trimmed Lambda functions SourceGeneratorLambdaJsonSerializer passing in JsonSerializerContext should be used instead.")]
+#endif    
     public class LambdaJsonSerializer : ILambdaSerializer
     {
         private const string DEBUG_ENVIRONMENT_VARIABLE_NAME = "LAMBDA_NET_SERIALIZER_DEBUG";
@@ -45,6 +49,7 @@ namespace Amazon.Lambda.Serialization.SystemTextJson
             _options.Converters.Add(new DateTimeConverter());
             _options.Converters.Add(new MemoryStreamConverter());
             _options.Converters.Add(new ConstantClassConverter());
+            _options.Converters.Add(new ByteArrayConverter());
 
             WriterOptions = new JsonWriterOptions()
             {
@@ -90,7 +95,7 @@ namespace Amazon.Lambda.Serialization.SystemTextJson
         {
             try
             {
-                if (_debug)
+                if (_debug && response != null)
                 {
                     using (var debugWriter = new StringWriter())
                     using (var utf8Writer = new Utf8JsonWriter(responseStream, WriterOptions))

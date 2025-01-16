@@ -20,15 +20,15 @@ if (!($AwsPowerShellFunctionEnvName))
 
 if (!($AwsPowerShellDefaultSdkVersion))
 {
-    New-Variable -Name AwsPowerShellDefaultSdkVersion -Value '7.0.3' -Option Constant
+    New-Variable -Name AwsPowerShellDefaultSdkVersion -Value '7.4.5' -Option Constant
 }
 
 if (!($AwsPowerShellTargetFramework))
 {
-    New-Variable -Name AwsPowerShellTargetFramework -Value 'netcoreapp3.1' -Option Constant
+    New-Variable -Name AwsPowerShellTargetFramework -Value 'net8.0' -Option Constant
 }
 
 if (!($AwsPowerShellLambdaRuntime))
 {
-    New-Variable -Name AwsPowerShellLambdaRuntime -Value 'dotnetcore3.1' -Option Constant
+    New-Variable -Name AwsPowerShellLambdaRuntime -Value 'dotnet8' -Option Constant
 }

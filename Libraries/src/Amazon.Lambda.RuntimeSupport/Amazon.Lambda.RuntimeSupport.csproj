@@ -1,50 +1,55 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\..\..\buildtools\common.props" />
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net5.0;net6.0</TargetFrameworks>
-    <VersionPrefix>1.6.0</VersionPrefix>
+    <TargetFrameworks>netstandard2.0;net6.0;net8.0;net9.0</TargetFrameworks>
+    <Version>1.12.2</Version>
     <Description>Provides a bootstrap and Lambda Runtime API Client to help you to develop custom .NET Core Lambda Runtimes.</Description>
-    <VersionPrefix>1.6.0</VersionPrefix>
-    <Description>Provides a bootstrap and Lambda Runtime API Client to help you  to develop custom .NET Core Lambda Runtimes.</Description>
     <AssemblyTitle>Amazon.Lambda.RuntimeSupport</AssemblyTitle>
     <AssemblyName>Amazon.Lambda.RuntimeSupport</AssemblyName>
     <PackageId>Amazon.Lambda.RuntimeSupport</PackageId>
     <PackageTags>AWS;Amazon;Lambda</PackageTags>
-	<PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateAssemblyVersionAttribute>true</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
+	<LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(ExecutableOutputType)'=='true' ">
     <OutputType>Exe</OutputType>
   </PropertyGroup>
+	
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' or '$(TargetFramework)' == 'net9.0'">
+    <WarningsAsErrors>IL2026,IL2067,IL2075</WarningsAsErrors>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>	
 
   <ItemGroup>
-	<None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-	<ItemGroup>
-    <PackageReference Include="NSwag.MSBuild" Version="12.0.4" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
 
-	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-		<PackageReference Include="System.Text.Json" Version="6.0.0" />
-	</ItemGroup>	
-	
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="6.0.10" />
+  </ItemGroup>	
+
   <ItemGroup>
     <ProjectReference Include="..\Amazon.Lambda.Core\Amazon.Lambda.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0' or '$(TargetFramework)' == 'net9.0'">
+    <ProjectReference Include="..\SnapshotRestore.Registry\SnapshotRestore.Registry.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="bootstrap.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="bootstrap-al2023.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>	  
   </ItemGroup>
-  <!--Regenerate InternalClientGenerated.txt by running: dotnet msbuild -t:GenerateClient Amazon.Lambda.RuntimeSupport.Client.csproj-->
-  <Target Name="GenerateClient">
-    <Error Condition="'$(OS)' != 'Windows_NT'" Text="The GenerateClient target is only available on Windows." />
-    <Exec Command="$(NSwagExe) swagger2csclient /input:Client\runtime-api.yaml /exceptionClass:RuntimeApiClientException /generateUpdateJsonSerializerSettingsMethod:false /generateClientInterfaces:true /generateJsonMethods:false /wrapResponses:true /clientClassAccessModifier:internal /typeAccessModifier:public /classname:InternalRuntimeApiClient /namespace:Amazon.Lambda.RuntimeSupport /output:Client\InternalClientGenerated.txt" />
-  </Target>
 </Project>

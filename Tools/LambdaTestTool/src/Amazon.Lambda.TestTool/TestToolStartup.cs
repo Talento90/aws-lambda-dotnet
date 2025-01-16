@@ -1,20 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Amazon.Lambda.TestTool.Runtime;
+using Amazon.Lambda.TestTool.SampleRequests;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-
-using Amazon.Lambda.TestTool.Runtime;
-using Amazon.Lambda.TestTool.SampleRequests;
+using System.Text.Json;
 
 namespace Amazon.Lambda.TestTool
 {
     public class TestToolStartup
     {
+        private static bool shouldDisableLogs;
+
         public class RunConfiguration
         {
-            public enum RunMode { Normal, Test};
+            public enum RunMode { Normal, Test };
 
             /// <summary>
             /// If this is set to Test then that disables any interactive activity or any calls to Environment.Exit which wouldn't work well during a test run.
@@ -36,9 +36,11 @@ namespace Amazon.Lambda.TestTool
         {
             try
             {
-                Utils.PrintToolTitle(productName);
-
                 var commandOptions = CommandLineOptions.Parse(args);
+                shouldDisableLogs = Utils.ShouldDisableLogs(commandOptions);
+
+                if (!shouldDisableLogs) Utils.PrintToolTitle(productName);
+
                 if (commandOptions.ShowHelp)
                 {
                     CommandLineOptions.PrintUsage();
@@ -47,37 +49,30 @@ namespace Amazon.Lambda.TestTool
 
                 var localLambdaOptions = new LocalLambdaOptions()
                 {
+                    Host = commandOptions.Host,
                     Port = commandOptions.Port
                 };
 
                 var lambdaAssemblyDirectory = commandOptions.Path ?? Directory.GetCurrentDirectory();
 
-#if NETCOREAPP3_1
-                var targetFramework = "netcoreapp3.1";
-#elif NET5_0
-                var targetFramework = "net5.0";
-#elif NET6_0
+#if NET6_0
                 var targetFramework = "net6.0";
+#elif NET8_0
+                var targetFramework = "net8.0";
+#elif NET9_0
+                var targetFramework = "net9.0";
 #endif
 
-                // Check to see if running in debug mode from this project's directory which means the test tool is being debugged.
-                // To make debugging easier pick one of the test Lambda projects.
-                if (lambdaAssemblyDirectory.EndsWith("Amazon.Lambda.TestTool.WebTester21"))
-                {
-                    lambdaAssemblyDirectory = Path.Combine(lambdaAssemblyDirectory, $"../../tests/LambdaFunctions/netcore21/S3EventFunction/bin/Debug/{targetFramework}");
-                }
-                else if (lambdaAssemblyDirectory.EndsWith("Amazon.Lambda.TestTool.WebTester31"))
-                {
-                    lambdaAssemblyDirectory = Path.Combine(lambdaAssemblyDirectory, $"../../tests/LambdaFunctions/netcore31/S3EventFunction/bin/Debug/{targetFramework}");
-                }
                 // If running in the project directory select the build directory so the deps.json file can be found.
-                else if (Utils.IsProjectDirectory(lambdaAssemblyDirectory))
+                if (Utils.IsProjectDirectory(lambdaAssemblyDirectory))
                 {
                     lambdaAssemblyDirectory = Path.Combine(lambdaAssemblyDirectory, $"bin/Debug/{targetFramework}");
                 }
 
+                lambdaAssemblyDirectory = Utils.SearchLatestCompilationDirectory(lambdaAssemblyDirectory);
+
                 localLambdaOptions.LambdaRuntime = LocalLambdaRuntime.Initialize(lambdaAssemblyDirectory);
-                runConfiguration.OutputWriter.WriteLine($"Loaded local Lambda runtime from project output {lambdaAssemblyDirectory}");
+                if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"Loaded local Lambda runtime from project output {lambdaAssemblyDirectory}");
 
                 if (commandOptions.NoUI)
                 {
@@ -122,12 +117,12 @@ namespace Amazon.Lambda.TestTool
             }
         }
 
-        
+
         public static void ExecuteWithNoUi(LocalLambdaOptions localLambdaOptions, CommandLineOptions commandOptions, string lambdaAssemblyDirectory, RunConfiguration runConfiguration)
         {
-            runConfiguration.OutputWriter.WriteLine("Executing Lambda function without web interface");
+            if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine("Executing Lambda function without web interface");
             var lambdaProjectDirectory = Utils.FindLambdaProjectDirectory(lambdaAssemblyDirectory);
-            
+
             string configFile = DetermineConfigFile(commandOptions, lambdaAssemblyDirectory: lambdaAssemblyDirectory, lambdaProjectDirectory: lambdaProjectDirectory);
             LambdaConfigInfo configInfo = LoadLambdaConfigInfo(configFile, commandOptions, lambdaAssemblyDirectory: lambdaAssemblyDirectory, lambdaProjectDirectory: lambdaProjectDirectory, runConfiguration);
             LambdaFunction lambdaFunction = LoadLambdaFunction(configInfo, localLambdaOptions, commandOptions, lambdaAssemblyDirectory: lambdaAssemblyDirectory, lambdaProjectDirectory: lambdaProjectDirectory, runConfiguration);
@@ -139,27 +134,27 @@ namespace Amazon.Lambda.TestTool
             {
                 if (new Amazon.Runtime.CredentialManagement.CredentialProfileStoreChain().TryGetProfile(awsProfile, out _))
                 {
-                    runConfiguration.OutputWriter.WriteLine($"... Setting AWS_PROFILE environment variable to {awsProfile}.");
+                    if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Setting AWS_PROFILE environment variable to {awsProfile}.");
                 }
                 else
                 {
-                    runConfiguration.OutputWriter.WriteLine($"... Warning: Profile {awsProfile} not found in the aws credential store.");
+                    if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Warning: Profile {awsProfile} not found in the aws credential store.");
                     awsProfile = null;
                 }
             }
             else
             {
-                runConfiguration.OutputWriter.WriteLine("... No profile choosen for AWS credentials. The --profile switch can be used to configure an AWS profile.");
+                if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine("... No profile choosen for AWS credentials. The --profile switch can be used to configure an AWS profile.");
             }
 
             var awsRegion = commandOptions.AWSRegion ?? configInfo.AWSRegion;
             if (!string.IsNullOrEmpty(awsRegion))
             {
-                runConfiguration.OutputWriter.WriteLine($"... Setting AWS_REGION environment variable to {awsRegion}.");
+                if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Setting AWS_REGION environment variable to {awsRegion}.");
             }
             else
             {
-                runConfiguration.OutputWriter.WriteLine("... No default AWS region configured. The --region switch can be used to configure an AWS Region.");
+                if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine("... No default AWS region configured. The --region switch can be used to configure an AWS Region.");
             }
 
             // Create the execution request that will be sent into the LocalLambdaRuntime.
@@ -176,7 +171,7 @@ namespace Amazon.Lambda.TestTool
 
             if (runConfiguration.Mode == RunConfiguration.RunMode.Normal && commandOptions.PauseExit)
             {
-                Console.WriteLine("Press any key to exit");
+                if (!shouldDisableLogs) Console.WriteLine("Press any key to exit");
                 Console.ReadKey();
             }
         }
@@ -186,7 +181,7 @@ namespace Amazon.Lambda.TestTool
             string configFile = null;
             if (string.IsNullOrEmpty(commandOptions.ConfigFile))
             {
-                configFile = Utils.SearchForConfigFiles(lambdaAssemblyDirectory).FirstOrDefault(x => string.Equals(Utils.DEFAULT_CONFIG_FILE, Path.GetFileName(x), StringComparison.OrdinalIgnoreCase));
+                configFile = Utils.SearchForConfigFiles(lambdaAssemblyDirectory, shouldDisableLogs).FirstOrDefault(x => string.Equals(Utils.DEFAULT_CONFIG_FILE, Path.GetFileName(x), StringComparison.OrdinalIgnoreCase));
             }
             else if (Path.IsPathRooted(commandOptions.ConfigFile))
             {
@@ -209,7 +204,7 @@ namespace Amazon.Lambda.TestTool
             LambdaConfigInfo configInfo;
             if (configFile != null)
             {
-                runConfiguration.OutputWriter.WriteLine($"... Using config file {configFile}");
+                if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Using config file {configFile}");
                 configInfo = LambdaDefaultsConfigFileParser.LoadFromFile(configFile);
             }
             else
@@ -252,7 +247,7 @@ namespace Amazon.Lambda.TestTool
             {
                 // The user has explicitly set a function handler value that is not in the config file or CloudFormation template.
                 // To support users testing add hoc methods create a temporary config object using explicit function handler value.
-                runConfiguration.OutputWriter.WriteLine($"... Info: function handler {functionHandler} is not defined in config file.");
+                if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Info: function handler {functionHandler} is not defined in config file.");
                 var temporaryConfigInfo = LambdaDefaultsConfigFileParser.LoadFromFile(new LambdaConfigFile
                 {
                     FunctionHandler = functionHandler,
@@ -265,7 +260,7 @@ namespace Amazon.Lambda.TestTool
                 lambdaFunction = localLambdaOptions.LoadLambdaFuntion(configInfo, functionHandler);
             }
 
-            runConfiguration.OutputWriter.WriteLine($"... Using function handler {functionHandler}");
+            if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Using function handler {functionHandler}");
             return lambdaFunction;
         }
 
@@ -278,7 +273,7 @@ namespace Amazon.Lambda.TestTool
             {
                 if (Path.IsPathFullyQualified(payload) && File.Exists(payload))
                 {
-                    runConfiguration.OutputWriter.WriteLine($"... Using payload with from the file {payload}");
+                    if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Using payload with from the file {payload}");
                     payload = File.ReadAllText(payload);
                     payloadFileFound = true;
                 }
@@ -300,7 +295,7 @@ namespace Amazon.Lambda.TestTool
                     {
                         if (File.Exists(possiblePath))
                         {
-                            runConfiguration.OutputWriter.WriteLine($"... Using payload with from the file {Path.GetFullPath(possiblePath)}");
+                            if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine($"... Using payload with from the file {Path.GetFullPath(possiblePath)}");
                             payload = File.ReadAllText(possiblePath);
                             payloadFileFound = true;
                             break;
@@ -311,13 +306,40 @@ namespace Amazon.Lambda.TestTool
 
             if (!payloadFileFound)
             {
-                if (!string.IsNullOrEmpty(payload))
+                if (!shouldDisableLogs)
                 {
-                    runConfiguration.OutputWriter.WriteLine($"... Using payload with the value {payload}");
+                    if (!string.IsNullOrEmpty(payload))
+                    {
+                        runConfiguration.OutputWriter.WriteLine($"... Using payload with the value {payload}");
+                    }
+                    else
+                    {
+                        runConfiguration.OutputWriter.WriteLine("... No payload configured. If a payload is required set the --payload switch to a file path or a JSON document.");
+                    }
                 }
-                else
+            }
+
+            try
+            {
+                var doc = JsonDocument.Parse(payload);
+            }
+            catch (JsonException)
+            {
+                try
                 {
-                    runConfiguration.OutputWriter.WriteLine("... No payload configured. If a payload is required set the --payload switch to a file path or a JSON document.");
+                    if (!payload.StartsWith("[") && !payload.StartsWith("{") && !payload.StartsWith("\""))
+                    {
+                        payload = "\"" + payload + "\"";
+                        JsonDocument.Parse(payload);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+                catch (JsonException)
+                {
+                    throw new ArgumentException("Provided payload for Lambda function is not a valid JSON document.");
                 }
             }
 
@@ -329,19 +351,32 @@ namespace Amazon.Lambda.TestTool
             try
             {
                 var response = localLambdaOptions.LambdaRuntime.ExecuteLambdaFunctionAsync(request).GetAwaiter().GetResult();
-
-                runConfiguration.OutputWriter.WriteLine("Captured Log information:");
-                runConfiguration.OutputWriter.WriteLine(response.Logs);
+                if (!shouldDisableLogs)
+                {
+                    runConfiguration.OutputWriter.WriteLine("Captured Log information:");
+                    runConfiguration.OutputWriter.WriteLine(response.Logs);
+                }
 
                 if (response.IsSuccess)
                 {
-                    runConfiguration.OutputWriter.WriteLine("Request executed successfully");
-                    runConfiguration.OutputWriter.WriteLine("Response:");
-                    runConfiguration.OutputWriter.WriteLine(response.Response);
+                    if (!shouldDisableLogs)
+                    {
+                        runConfiguration.OutputWriter.WriteLine("Request executed successfully");
+                        runConfiguration.OutputWriter.WriteLine("Response:");
+                    }
+
+                    if (!shouldDisableLogs)
+                    {
+                        runConfiguration.OutputWriter.WriteLine(response.Response);
+                    }
+                    else
+                    {
+                        runConfiguration.OutputWriter.Write(response.Response);
+                    }
                 }
                 else
                 {
-                    runConfiguration.OutputWriter.WriteLine("Request failed to execute");
+                    if (!shouldDisableLogs) runConfiguration.OutputWriter.WriteLine("Request failed to execute");
                     runConfiguration.OutputWriter.WriteLine($"Error:");
                     runConfiguration.OutputWriter.WriteLine(response.Error);
                 }

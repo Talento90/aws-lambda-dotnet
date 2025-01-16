@@ -86,7 +86,10 @@ namespace Amazon.Lambda.Serialization.Json
                     }
                 }
             }
-            else if (type.FullName.Equals("Amazon.DynamoDBv2.Model.StreamRecord", StringComparison.Ordinal))
+            else if (
+                type.FullName.Equals("Amazon.Lambda.DynamoDBEvents.DynamoDBEvent+StreamRecord", StringComparison.Ordinal) ||
+                type.FullName.Equals("Amazon.DynamoDBv2.Model.StreamRecord", StringComparison.Ordinal)
+            )
             {
                 foreach (JsonProperty property in properties)
                 {
@@ -96,7 +99,10 @@ namespace Amazon.Lambda.Serialization.Json
                     }
                 }
             }
-            else if (type.FullName.Equals("Amazon.DynamoDBv2.Model.AttributeValue", StringComparison.Ordinal))
+            else if (
+                type.FullName.Equals("Amazon.Lambda.DynamoDBEvents.DynamoDBEvent+AttributeValue", StringComparison.Ordinal) ||
+                type.FullName.Equals("Amazon.DynamoDBv2.Model.AttributeValue", StringComparison.Ordinal)
+            )
             {
                 foreach (JsonProperty property in properties)
                 {
@@ -124,8 +130,9 @@ namespace Amazon.Lambda.Serialization.Json
                     }
                 }
             }
+            // If user is directly using CloudWatchEvent class or using a derived type created in custom namespace.
             else if (type.FullName.StartsWith("Amazon.Lambda.CloudWatchEvents.")
-                     && (type.GetTypeInfo().BaseType?.FullName?.StartsWith("Amazon.Lambda.CloudWatchEvents.CloudWatchEvent`",
+                     || (type.GetTypeInfo().BaseType?.FullName?.StartsWith("Amazon.Lambda.CloudWatchEvents.CloudWatchEvent`",
                              StringComparison.Ordinal) ?? false))
             {
                 foreach (JsonProperty property in properties)
@@ -133,6 +140,16 @@ namespace Amazon.Lambda.Serialization.Json
                     if (property.PropertyName.Equals("DetailType", StringComparison.Ordinal))
                     {
                         property.PropertyName = "detail-type";
+                    }
+                }
+            }
+            else if (type.FullName.Equals("Amazon.Lambda.KafkaEvents.KafkaEvent+KafkaEventRecord", StringComparison.Ordinal))
+            {
+                foreach (JsonProperty property in properties)
+                {
+                    if (property.PropertyName.Equals("Value", StringComparison.Ordinal))
+                    {
+                        property.MemberConverter = StreamDataConverter;
                     }
                 }
             }

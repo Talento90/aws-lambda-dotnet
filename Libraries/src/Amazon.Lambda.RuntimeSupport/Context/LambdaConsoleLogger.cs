@@ -15,6 +15,7 @@
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport.Helpers;
 using System;
+using System.Runtime.Versioning;
 
 namespace Amazon.Lambda.RuntimeSupport
 {
@@ -43,6 +44,16 @@ namespace Amazon.Lambda.RuntimeSupport
         public void Log(string level, string message)
         {
             _consoleLoggerRedirector.FormattedWriteLine(level, message);
+        }
+
+        public void Log(string level, string message, params object[] args)
+        {
+            _consoleLoggerRedirector.FormattedWriteLine(level, message, args);
+        }
+
+        public void Log(string level, Exception exception, string message, params object[] args)
+        {
+            _consoleLoggerRedirector.FormattedWriteLine(level, exception, message, args);
         }
 #endif
     }
